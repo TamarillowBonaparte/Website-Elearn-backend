@@ -3,8 +3,7 @@ from typing import Optional
 from datetime import date, datetime
 
 class PresensiGenerateRequest(BaseModel):
-    id_kelas: int
-    kode_mk: str
+    id_kelas_mk: int
     pertemuan_ke: int
     tanggal: date
     waktu_mulai: str  # Format: "HH:MM"
@@ -13,7 +12,7 @@ class PresensiGenerateRequest(BaseModel):
 class PresensiResponse(BaseModel):
     id_presensi: int
     id_mahasiswa: int
-    kode_mk: str
+    id_kelas_mk: int
     tanggal: date
     pertemuan_ke: int
     status: str
@@ -37,6 +36,7 @@ class PresensiDetailResponse(BaseModel):
 
 class PresensiSummary(BaseModel):
     id: int
+    id_kelas_mk: int
     kelas: str
     matkul: str
     kode_mk: str
@@ -47,3 +47,25 @@ class PresensiSummary(BaseModel):
     total_mhs: int
     hadir: int
     alpa: int
+
+class PresensiMahasiswaResponse(BaseModel):
+    """Response schema untuk GET /presensi/mahasiswa/{id_mahasiswa} - Android"""
+    id_presensi: int
+    id_kelas_mk: int
+    kode_mk: str
+    nama_mk: str
+    kelas: str
+    tanggal: date
+    pertemuan_ke: int
+    status: str
+    waktu_mulai: Optional[str]
+    waktu_selesai: Optional[str]
+    waktu_input: Optional[datetime]
+    
+    class Config:
+        from_attributes = True
+
+class FaceRecognitionUpdateRequest(BaseModel):
+    """Request schema untuk POST /presensi/update-status-face-recognition - Android"""
+    id_presensi: int
+    nim: str
