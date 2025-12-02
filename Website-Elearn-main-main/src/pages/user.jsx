@@ -11,6 +11,7 @@ import {
   Shield,
   BookOpen,
   Clock,
+  AlertCircle,
 } from "lucide-react";
 
 export default function UserPage() {
@@ -23,6 +24,7 @@ export default function UserPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [loggedUser, setLoggedUser] = useState(null);
   const [showTokenWarning, setShowTokenWarning] = useState(false);
+  const [notification, setNotification] = useState({ show: false, type: '', message: '' });
   const [currentUser, setCurrentUser] = useState({
     id_user: null,
     nama: "",
@@ -128,7 +130,7 @@ export default function UserPage() {
       setUsers(transformedUsers);
     } catch (error) {
       console.error("Error fetching users:", error);
-      alert("Gagal memuat data pengguna: " + error.message);
+      showNotification('error', "Gagal memuat data pengguna: " + error.message);
     } finally {
       setIsLoading(false);
     }
@@ -141,6 +143,13 @@ export default function UserPage() {
     } catch (error) {
       console.error("Error fetching kelas:", error);
     }
+  };
+
+  const showNotification = (type, message) => {
+    setNotification({ show: true, type, message });
+    setTimeout(() => {
+      setNotification({ show: false, type: '', message: '' });
+    }, 3000);
   };
 
   // Filter users berdasarkan tab aktif
@@ -186,10 +195,10 @@ export default function UserPage() {
         setIsLoading(true);
         await apiDelete(`/users/${id}`);
         await fetchUsers(); // Refresh list
-        alert("Pengguna berhasil dihapus");
+        showNotification('success', "Pengguna berhasil dihapus");
       } catch (error) {
         console.error("Error deleting user:", error);
-        alert("Gagal menghapus pengguna: " + error.message);
+        showNotification('error', "Gagal menghapus pengguna: " + error.message);
       } finally {
         setIsLoading(false);
       }
@@ -204,7 +213,7 @@ export default function UserPage() {
       if (formMode === "add") {
         // Validation: Check if trying to create super_admin when not logged as super_admin
         if (currentUser.role === "super_admin" && loggedUser?.role !== "super_admin") {
-          alert("Hanya Super Admin yang dapat membuat akun Super Admin baru");
+          showNotification('error', "Hanya Super Admin yang dapat membuat akun Super Admin baru");
           setIsLoading(false);
           return;
         }
@@ -246,10 +255,10 @@ export default function UserPage() {
           await apiPost("/users/mahasiswa", mahasiswaData);
         } else {
           // For super_admin or other roles (fallback)
-          alert("Role super_admin tidak dapat dibuat dari form ini");
+          showNotification('error', "Role super_admin tidak dapat dibuat dari form ini");
           return;
         }
-        alert("Pengguna berhasil ditambahkan");
+        showNotification('success', "Pengguna berhasil ditambahkan");
       } else {
         // Update existing user
         if (currentUser.role === "admin") {
@@ -279,14 +288,14 @@ export default function UserPage() {
           }
           await apiPut(`/users/mahasiswa/${currentUser.id_user}`, updateData);
         }
-        alert("Pengguna berhasil diperbarui");
+        showNotification('success', "Pengguna berhasil diperbarui");
       }
 
       setIsModalOpen(false);
       await fetchUsers(); // Refresh list
     } catch (error) {
       console.error("Error saving user:", error);
-      alert("Gagal menyimpan pengguna: " + error.message);
+      showNotification('error', "Gagal menyimpan pengguna: " + error.message);
     } finally {
       setIsLoading(false);
     }
@@ -308,6 +317,17 @@ export default function UserPage() {
       activeNav={activeNav}
       setActiveNav={setActiveNav}
     >
+      {/* Notification */}
+      {notification.show && (
+        <div className="fixed top-4 right-4 z-50 animate-slide-in">
+          <div className={`px-6 py-4 rounded-xl shadow-lg flex items-center gap-3 ${
+            notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
+          } text-white`}>
+            {notification.type === 'success' ? '✓' : '✕'} {notification.message}
+          </div>
+        </div>
+      )}
+
       {/* Token Expiration Warning Banner */}
       {showTokenWarning && (
         <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4 rounded-r-lg">

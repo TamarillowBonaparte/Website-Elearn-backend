@@ -29,7 +29,7 @@ THRESHOLD = 0.4  # Cosine distance threshold (lower = more strict)
 
 # Liveness Detection Configuration
 LIVENESS_ENABLED = True  # Toggle liveness detection on/off
-MOIRE_THRESHOLD = 0.3  # Threshold untuk deteksi pola moiré - REVERSED LOGIC: ratio < threshold = spoofing
+MOIRE_THRESHOLD = 0.4  # Threshold untuk deteksi pola moiré - REVERSED LOGIC: ratio < threshold = spoofing
 COLOR_VAR_S_THRESHOLD = 400  # Saturation variance threshold
 COLOR_VAR_V_THRESHOLD = 500  # Value variance threshold
 

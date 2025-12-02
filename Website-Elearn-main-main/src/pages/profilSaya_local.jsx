@@ -35,7 +35,7 @@ export default function ProfilSaya() {
   const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
 
   useEffect(() => {
-    // Check if user is admin (dosen)
+    // Check if user is admin (admin = dosen in database)
     if (currentUser.role !== 'admin') {
       navigate('/dashboard');
       return;

@@ -274,16 +274,16 @@ export default function KelolaDosen() {
         </div>
 
         {/* Dosen Table */}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-left py-3 px-4 font-semibold text-gray-700">NIP</th>
-                <th className="text-left py-3 px-4 font-semibold text-gray-700">Nama Dosen</th>
-                <th className="text-left py-3 px-4 font-semibold text-gray-700">Email</th>
-                <th className="text-left py-3 px-4 font-semibold text-gray-700">No HP</th>
-                <th className="text-left py-3 px-4 font-semibold text-gray-700">Jenis Kelamin</th>
-                <th className="text-center py-3 px-4 font-semibold text-gray-700">Aksi</th>
+              <tr className="bg-blue-600 text-white">
+                <th className="text-left py-3 px-4 font-semibold">NIP</th>
+                <th className="text-left py-3 px-4 font-semibold">Nama Dosen</th>
+                <th className="text-left py-3 px-4 font-semibold">Email</th>
+                <th className="text-left py-3 px-4 font-semibold">No HP</th>
+                <th className="text-left py-3 px-4 font-semibold">Jenis Kelamin</th>
+                <th className="text-center py-3 px-4 font-semibold">Aksi</th>
               </tr>
             </thead>
             <tbody>
@@ -300,27 +300,30 @@ export default function KelolaDosen() {
                       {dosen.jenis_kelamin === 'L' ? 'Laki-laki' : dosen.jenis_kelamin === 'P' ? 'Perempuan' : '-'}
                     </span>
                   </td>
-                  <td className="py-3 px-4 text-center">
-                    <div className="flex items-center justify-center gap-2">
+                  <td className="py-3 px-4">
+                    <div className="flex items-center gap-3">
                       {isSuperAdmin ? (
                         <>
                           <button
                             onClick={() => window.location.href = `/detail-profil-dosen/${dosen.id_dosen}`}
-                            className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-lg text-sm flex items-center gap-1 transition"
+                            disabled={loading}
+                            className="text-purple-600 hover:text-purple-800 flex items-center gap-1 disabled:opacity-50"
                             title="Lihat Detail Profil"
                           >
                             <Users className="h-4 w-4" /> Detail
                           </button>
                           <button
                             onClick={() => handleOpenEditModal(dosen)}
-                            className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg text-sm flex items-center gap-1 transition"
+                            disabled={loading}
+                            className="text-blue-600 hover:text-blue-800 flex items-center gap-1 disabled:opacity-50"
                             title="Edit Data Dosen"
                           >
                             <Edit2 className="h-4 w-4" /> Edit
                           </button>
                           <button
                             onClick={() => handleOpenModal(dosen)}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm flex items-center gap-1 transition"
+                            disabled={loading}
+                            className="text-green-600 hover:text-green-800 flex items-center gap-1 disabled:opacity-50"
                             title="Kelola Assignment"
                           >
                             <BookOpen className="h-4 w-4" /> Akses
@@ -331,7 +334,8 @@ export default function KelolaDosen() {
                         currentUser.id_user === dosen.id_user && (
                           <button
                             onClick={() => window.location.href = '/profil-saya'}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm flex items-center gap-1 transition"
+                            disabled={loading}
+                            className="text-blue-600 hover:text-blue-800 flex items-center gap-1 disabled:opacity-50"
                             title="Lihat Profil Saya"
                           >
                             <Users className="h-4 w-4" /> Profil Saya
@@ -356,7 +360,7 @@ export default function KelolaDosen() {
 
       {/* Modal Kelola Assignment */}
       {showModal && selectedDosen && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+        <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, margin: 0}} className="w-screen h-screen bg-black/60 flex items-center justify-center z-[100] p-4 backdrop-blur-sm">
           <div className="bg-white rounded-2xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
             <div className="flex items-center justify-between mb-6">
               <div>
@@ -506,7 +510,8 @@ export default function KelolaDosen() {
                       </div>
                       <button
                         onClick={() => handleDeleteAssignment(assignment.id_kelas_mk)}
-                        className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg transition"
+                        className="text-red-600 hover:text-red-800 flex items-center gap-1"
+                        title="Hapus Assignment"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -521,7 +526,7 @@ export default function KelolaDosen() {
 
       {/* Modal Edit Dosen */}
       {showEditModal && selectedDosen && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+        <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, margin: 0}} className="w-screen h-screen bg-black/60 flex items-center justify-center z-[100] p-4 backdrop-blur-sm">
           <div className="bg-white rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
             <div className="flex items-center justify-between mb-6">
               <div>

@@ -1,7 +1,7 @@
 import DashboardLayout from "../layouts/dashboardlayout";
 import { useState, useEffect } from "react";
 import { navigationItems } from "../navigation/navigation";
-import { ArrowLeft, UserCheck, Users, BookOpen, Calendar, Download, CheckCircle, XCircle, Clock } from "lucide-react";
+import { ArrowLeft, UserCheck, Users, BookOpen, Calendar, Download, CheckCircle, XCircle, Clock, AlertCircle } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
 export default function DetailPresensiAbsen() {
@@ -11,6 +11,7 @@ export default function DetailPresensiAbsen() {
 
   const [daftarAbsen, setDaftarAbsen] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [notification, setNotification] = useState({ show: false, type: '', message: '' });
   const [detailPresensi, setDetailPresensi] = useState({
     kelas: "",
     matkul: "",
@@ -25,6 +26,13 @@ export default function DetailPresensiAbsen() {
   useEffect(() => {
     loadDetailPresensi();
   }, [id_kelas_mk, tanggal, pertemuan_ke]);
+
+  const showNotification = (type, message) => {
+    setNotification({ show: true, type, message });
+    setTimeout(() => {
+      setNotification({ show: false, type: '', message: '' });
+    }, 3000);
+  };
 
   const loadDetailPresensi = async () => {
     try {
@@ -52,12 +60,12 @@ export default function DetailPresensiAbsen() {
           }));
         }
       } else {
-        alert("Data presensi tidak ditemukan");
-        navigate("/presensi");
+        showNotification('error', "Data presensi tidak ditemukan");
+        setTimeout(() => navigate("/presensi"), 1500);
       }
     } catch (error) {
       console.error("Error loading detail presensi:", error);
-      alert("Gagal memuat data presensi");
+      showNotification('error', "Gagal memuat data presensi");
     } finally {
       setLoading(false);
     }
@@ -186,6 +194,17 @@ export default function DetailPresensiAbsen() {
 
   return (
     <DashboardLayout navigationItems={navigationItems} activeNav={activeNav} setActiveNav={setActiveNav}>
+      {/* Notification */}
+      {notification.show && (
+        <div className="fixed top-4 right-4 z-50 animate-slide-in">
+          <div className={`px-6 py-4 rounded-xl shadow-lg flex items-center gap-3 ${
+            notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
+          } text-white`}>
+            {notification.type === 'success' ? '✓' : '✕'} {notification.message}
+          </div>
+        </div>
+      )}
+
       <div className="space-y-6">
         
         {/* Header dengan Tombol Kembali */}

@@ -1,7 +1,7 @@
 import DashboardLayout from "../layouts/dashboardlayout";
 import { useState, useEffect } from "react";
 import { navigationItems } from "../navigation/navigation";
-import { UserCheck, Plus, Search, Filter, Eye, Calendar, Users, BookOpen, Clock, Trash, XCircle } from "lucide-react";
+import { UserCheck, Plus, Search, Filter, Eye, Calendar, Users, BookOpen, Clock, Trash, XCircle, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export default function Presensi() {
@@ -28,6 +28,10 @@ export default function Presensi() {
   const [daftarPresensi, setDaftarPresensi] = useState([]);
   const [loading, setLoading] = useState(true);
   
+  // Get current user role
+  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const isSuperAdmin = currentUser.role === 'super_admin';
+  
   // State untuk modal sukses
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successData, setSuccessData] = useState(null);
@@ -36,12 +40,26 @@ export default function Presensi() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [showDeleteSuccessModal, setShowDeleteSuccessModal] = useState(false);
   const [deleteSuccessInfo, setDeleteSuccessInfo] = useState(null);
+  const [notification, setNotification] = useState({ show: false, type: '', message: '' });
 
   // Load data kelas_mata_kuliah dari backend
   useEffect(() => {
     loadDataKelasMK();
-    loadDataPresensi();
   }, []);
+
+  // Load presensi after kelasMK is loaded
+  useEffect(() => {
+    if (daftarKelasMK.length > 0 || isSuperAdmin) {
+      loadDataPresensi();
+    }
+  }, [daftarKelasMK]);
+
+  const showNotification = (type, message) => {
+    setNotification({ show: true, type, message });
+    setTimeout(() => {
+      setNotification({ show: false, type: '', message: '' });
+    }, 3000);
+  };
 
   const loadDataKelasMK = async () => {
     try {
@@ -60,7 +78,7 @@ export default function Presensi() {
       }
     } catch (error) {
       console.error("Error loading kelas mata kuliah:", error);
-      alert("⚠️ Gagal memuat data mata kuliah. Pastikan backend berjalan dan Anda sudah login!");
+      showNotification('error', "⚠️ Gagal memuat data mata kuliah. Pastikan backend berjalan dan Anda sudah login!");
       setDaftarKelasMK([]);
     }
   };
@@ -71,7 +89,17 @@ export default function Presensi() {
       if (response.ok) {
         const data = await response.json();
         console.log("✅ Loaded presensi:", data);
-        setDaftarPresensi(data);
+        
+        // Filter based on role
+        if (isSuperAdmin) {
+          // Super admin can see all presensi
+          setDaftarPresensi(data);
+        } else {
+          // Admin (dosen) only see presensi from their kelas_mata_kuliah
+          const myKelasMKIds = daftarKelasMK.map(mk => mk.id_kelas_mk);
+          const filtered = data.filter(presensi => myKelasMKIds.includes(presensi.id_kelas_mk));
+          setDaftarPresensi(filtered);
+        }
       }
     } catch (error) {
       console.error("Error loading presensi:", error);
@@ -83,7 +111,7 @@ export default function Presensi() {
 
   const handleGeneratePresensi = async () => {
     if (!generateForm.id_kelas_mk || !generateForm.minggu || !generateForm.tanggal || !generateForm.waktu_mulai || !generateForm.waktu_selesai) {
-      alert("Mohon lengkapi semua field!");
+      showNotification('error', "Mohon lengkapi semua field!");
       return;
     }
 
@@ -147,11 +175,11 @@ export default function Presensi() {
         // Refresh list presensi
         loadDataPresensi();
       } else {
-        alert(`❌ Error: ${result.detail || "Gagal generate presensi"}`);
+        showNotification('error', `❌ Error: ${result.detail || "Gagal generate presensi"}`);
       }
     } catch (error) {
       console.error("Error generate presensi:", error);
-      alert("❌ Terjadi kesalahan saat menghubungi server. Pastikan backend berjalan di http://localhost:8000");
+      showNotification('error', "❌ Terjadi kesalahan saat menghubungi server. Pastikan backend berjalan di http://localhost:8000");
     }
   };
 
@@ -183,11 +211,11 @@ export default function Presensi() {
         setShowDeleteSuccessModal(true);
         setDeleteTarget(null);
       } else {
-        alert(`❌ Gagal menghapus presensi: ${result.detail || 'Unknown error'}`);
+        showNotification('error', `❌ Gagal menghapus presensi: ${result.detail || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error deleting presensi:', error);
-      alert('❌ Terjadi kesalahan saat menghapus presensi. Periksa koneksi ke backend.');
+      showNotification('error', '❌ Terjadi kesalahan saat menghapus presensi. Periksa koneksi ke backend.');
     }
   };
 
@@ -218,6 +246,17 @@ export default function Presensi() {
 
   return (
     <DashboardLayout navigationItems={navigationItems} activeNav={activeNav} setActiveNav={setActiveNav}>
+      {/* Notification */}
+      {notification.show && (
+        <div className="fixed top-4 right-4 z-50 animate-slide-in">
+          <div className={`px-6 py-4 rounded-xl shadow-lg flex items-center gap-3 ${
+            notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
+          } text-white`}>
+            {notification.type === 'success' ? '✓' : '✕'} {notification.message}
+          </div>
+        </div>
+      )}
+
       <div className="space-y-6">
         
         {/* Section 1: Generate Presensi Baru */}
@@ -474,7 +513,7 @@ export default function Presensi() {
 
       {/* Success Modal dengan Animasi Checkmark */}
       {showSuccessModal && successData && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fadeIn">
+        <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, margin: 0}} className="w-screen h-screen bg-black bg-opacity-50 flex items-center justify-center z-[100] animate-fadeIn">
           <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 transform animate-scaleIn shadow-2xl">
             {/* Animated Checkmark */}
             <div className="flex justify-center mb-6">
@@ -555,7 +594,7 @@ export default function Presensi() {
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && deleteTarget && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fadeIn">
+        <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, margin: 0}} className="w-screen h-screen bg-black bg-opacity-50 flex items-center justify-center z-[100] animate-fadeIn">
           <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 transform animate-scaleIn shadow-xl">
             <div className="flex justify-center mb-4">
               <div className="relative">
@@ -587,7 +626,7 @@ export default function Presensi() {
 
       {/* Delete Success Modal */}
       {showDeleteSuccessModal && deleteSuccessInfo && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fadeIn">
+        <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, margin: 0}} className="w-screen h-screen bg-black bg-opacity-50 flex items-center justify-center z-[100] animate-fadeIn">
           <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 transform animate-scaleIn shadow-2xl">
             <div className="flex justify-center mb-6">
               <div className="relative">

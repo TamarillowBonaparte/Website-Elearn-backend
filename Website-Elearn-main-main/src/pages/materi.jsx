@@ -1,108 +1,3 @@
-// // src/pages/materi.jsx
-// import DashboardLayout from "../layouts/dashboardlayout";
-// import { useState, useEffect } from "react";
-// import { navigationItems } from "../navigation/navigation";
-// import { Users, ArrowRight, AlertCircle } from "lucide-react";
-// import { useNavigate } from "react-router-dom";
-// import { apiGet } from "../utils/apiUtils";
-
-// export default function Materi() {
-//   const [activeNav, setActiveNav] = useState("materi");
-//   const [kelasList, setKelasList] = useState([]);
-//   const [loading, setLoading] = useState(true);
-//   const [error, setError] = useState(null);
-//   const navigate = useNavigate();
-
-//   useEffect(() => {
-//     fetchKelas();
-//   }, []);
-
-//   const fetchKelas = async () => {
-//     try {
-//       setLoading(true);
-//       setError(null);
-//       const data = await apiGet('/kelas');
-//       setKelasList(data);
-//     } catch (error) {
-//       console.error("Error fetching kelas:", error);
-//       setError(error.message);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   if (loading) {
-//     return (
-//       <DashboardLayout navigationItems={navigationItems} activeNav={activeNav} setActiveNav={setActiveNav}>
-//         <div className="flex justify-center items-center h-64">
-//           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-//         </div>
-//       </DashboardLayout>
-//     );
-//   }
-
-//   if (error) {
-//     return (
-//       <DashboardLayout navigationItems={navigationItems} activeNav={activeNav} setActiveNav={setActiveNav}>
-//         <div className="bg-red-50 border border-red-200 rounded-xl p-6 flex items-start gap-3">
-//           <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-//           <div>
-//             <h3 className="font-semibold text-red-800 mb-1">Error Loading Data</h3>
-//             <p className="text-red-600 text-sm">{error}</p>
-//             <button 
-//               onClick={fetchKelas}
-//               className="mt-3 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm transition"
-//             >
-//               Coba Lagi
-//             </button>
-//           </div>
-//         </div>
-//       </DashboardLayout>
-//     );
-//   }
-
-//   return (
-//     <DashboardLayout navigationItems={navigationItems} activeNav={activeNav} setActiveNav={setActiveNav}>
-//       <div className="bg-white/70 backdrop-blur-sm border border-gray-200 rounded-2xl p-8 shadow-sm">
-//         <h1 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
-//           <Users className="text-blue-600" /> Pilih Kelas
-//         </h1>
-
-//         {kelasList.length === 0 ? (
-//           <div className="text-center py-12">
-//             <Users className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-//             <p className="text-gray-500">Belum ada kelas tersedia</p>
-//           </div>
-//         ) : (
-//           <div className="grid md:grid-cols-3 gap-6">
-//             {kelasList.map((kelas) => (
-//               <div
-//                 key={kelas.id_kelas}
-//                 onClick={() => navigate(`/materi/kelas/${kelas.id_kelas}`)}
-//                 className="border border-gray-200 rounded-xl p-6 bg-white hover:shadow-lg transition cursor-pointer hover:border-blue-400 group"
-//               >
-//                 <div className="flex items-center justify-between mb-3">
-//                   <h2 className="text-xl font-bold text-gray-800 group-hover:text-blue-600 transition">
-//                     {kelas.nama_kelas}
-//                   </h2>
-//                   <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-blue-600 transition" />
-//                 </div>
-//                 <p className="text-gray-600 text-sm mb-1">
-//                   <span className="font-medium">Tahun Ajaran:</span> {kelas.tahun_ajaran}
-//                 </p>
-//                 <p className="text-gray-600 text-sm">
-//                   <span className="font-medium">Semester:</span> {kelas.semester}
-//                 </p>
-//               </div>
-//             ))}
-//           </div>
-//         )}
-//       </div>
-//     </DashboardLayout>
-//   );
-// }
-
-// src/pages/materi.jsx
 import DashboardLayout from "../layouts/dashboardlayout";
 import { useState, useEffect } from "react";
 import { navigationItems } from "../navigation/navigation";
@@ -202,9 +97,11 @@ export default function Materi() {
   return (
     <DashboardLayout navigationItems={navigationItems} activeNav={activeNav} setActiveNav={setActiveNav}>
       <div className="bg-white/70 backdrop-blur-sm border border-gray-200 rounded-2xl p-8 shadow-sm">
-        <h1 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
-          <BookOpen className="text-blue-600" /> Pilih Mata Kuliah
-        </h1>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
+            <BookOpen className="text-blue-600" /> Pilih Mata Kuliah
+          </h1>
+        </div>
 
         <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <p className="text-sm text-blue-800">

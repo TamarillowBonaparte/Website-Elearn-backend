@@ -41,22 +41,23 @@ export default function Header({
 
   return (
     <header className="bg-white/80 backdrop-blur-md border-b border-gray-200/50 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center py-4">
-          {/* Hamburger Menu untuk Mobile */}
-          <button
-            onClick={onToggleMobileSidebar}
-            className="lg:hidden p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            {isMobileSidebarOpen ? (
-              <X className="h-6 w-6" />
-            ) : (
-              <Menu className="h-6 w-6" />
-            )}
-          </button>
-
-          {/* Logo */}
+      <div className="w-full px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between py-4">
+          {/* Left Side: Hamburger + Logo */}
           <div className="flex items-center space-x-3">
+            {/* Hamburger Menu untuk Mobile */}
+            <button
+              onClick={onToggleMobileSidebar}
+              className="lg:hidden p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              {isMobileSidebarOpen ? (
+                <X className="h-6 w-6" />
+              ) : (
+                <Menu className="h-6 w-6" />
+              )}
+            </button>
+
+            {/* Logo */}
             <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-600 rounded-xl flex items-center justify-center">
               <BookOpen className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
             </div>
@@ -70,10 +71,7 @@ export default function Header({
             </div>
           </div>
 
-          {/* Spacer untuk push user profile ke kanan */}
-          <div className="flex-1"></div>
-
-          {/* User Profile */}
+          {/* Right Side: User Profile */}
           <div className="flex items-center space-x-2 sm:space-x-4">
             {/* Profil User */}
             <div className="relative" ref={dropdownRef}>
