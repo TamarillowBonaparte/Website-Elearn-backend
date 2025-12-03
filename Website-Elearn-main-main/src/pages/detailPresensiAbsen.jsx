@@ -1,7 +1,7 @@
 import DashboardLayout from "../layouts/dashboardlayout";
 import { useState, useEffect } from "react";
 import { navigationItems } from "../navigation/navigation";
-import { ArrowLeft, UserCheck, Users, BookOpen, Calendar, Download, CheckCircle, XCircle, Clock, AlertCircle } from "lucide-react";
+import { ArrowLeft, UserCheck, Users, BookOpen, Calendar, Download, CheckCircle, XCircle, Clock, AlertCircle, Edit2, Save, X } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
 export default function DetailPresensiAbsen() {
@@ -21,6 +21,17 @@ export default function DetailPresensiAbsen() {
     waktu_mulai: "",
     waktu_selesai: ""
   });
+  
+  // State untuk edit status
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingPresensi, setEditingPresensi] = useState(null);
+  const [editForm, setEditForm] = useState({
+    status: ""
+  });
+  
+  // Get current user role
+  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const isAdminOrSuperAdmin = currentUser.role === 'admin' || currentUser.role === 'super_admin';
 
   // Load data dari backend
   useEffect(() => {
@@ -91,6 +102,52 @@ export default function DetailPresensiAbsen() {
   const handleKembali = () => {
     navigate("/presensi");
   };
+  
+  const handleEditStatus = (mahasiswa) => {
+    setEditingPresensi(mahasiswa);
+    setEditForm({
+      status: mahasiswa.status
+    });
+    setShowEditModal(true);
+  };
+  
+  const handleSaveEditStatus = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:8000/presensi/admin/update-status/${editingPresensi.id_presensi}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          status: editForm.status
+        })
+      });
+      
+      if (response.ok) {
+        showNotification('success', '✓ Status presensi berhasil diupdate!');
+        setShowEditModal(false);
+        setEditingPresensi(null);
+        setEditForm({ status: "" });
+        
+        // Reload data
+        loadDetailPresensi();
+      } else {
+        const errorData = await response.json();
+        showNotification('error', `❌ Gagal update status: ${errorData.detail || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error updating presensi status:', error);
+      showNotification('error', '❌ Terjadi kesalahan saat mengupdate status');
+    }
+  };
+  
+  const handleCancelEdit = () => {
+    setShowEditModal(false);
+    setEditingPresensi(null);
+    setEditForm({ status: "" });
+  };
 
   const handleExport = () => {
     // Export data ke CSV
@@ -146,7 +203,7 @@ export default function DetailPresensiAbsen() {
 
   const getStatusBadge = (status) => {
     const badges = {
-      Hadir: { 
+      "Hadir": { 
         color: "bg-green-100 text-green-800 border-green-300", 
         icon: CheckCircle, 
         text: "Hadir" 
@@ -156,11 +213,11 @@ export default function DetailPresensiAbsen() {
         icon: Clock,
         text: "Belum Absen"
       },
-      Alfa: { 
+      "Alfa": { 
         color: "bg-red-100 text-red-800 border-red-300", 
         icon: XCircle, 
-        text: "Alpa" 
-      },
+        text: "Alfa" 
+      }
     };
     const badge = badges[status] || badges["Belum Absen"];
     const Icon = badge.icon;
@@ -324,6 +381,9 @@ export default function DetailPresensiAbsen() {
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Status</th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Waktu Absen</th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Verifikasi Foto</th>
+                  {isAdminOrSuperAdmin && (
+                    <th className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Aksi</th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white">
@@ -362,6 +422,18 @@ export default function DetailPresensiAbsen() {
                         </span>
                       )}
                     </td>
+                    {isAdminOrSuperAdmin && (
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        <button
+                          onClick={() => handleEditStatus(mahasiswa)}
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 mx-auto"
+                          title="Edit Status"
+                        >
+                          <Edit2 className="h-3.5 w-3.5" />
+                          Edit
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -411,6 +483,93 @@ export default function DetailPresensiAbsen() {
         </div>
 
       </div>
+
+      {/* Edit Status Modal */}
+      {showEditModal && editingPresensi && (
+        <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, margin: 0}} className="w-screen h-screen bg-black bg-opacity-50 flex items-center justify-center z-[100] animate-fadeIn">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 transform animate-scaleIn shadow-2xl">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <Edit2 className="h-5 w-5 text-blue-600" />
+                Edit Status Presensi
+              </h2>
+              <button onClick={handleCancelEdit} className="text-gray-400 hover:text-gray-600 transition">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Info Mahasiswa */}
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 mb-6">
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600 font-medium">NIM:</span>
+                  <span className="font-bold text-gray-900">{editingPresensi.nim}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600 font-medium">Nama:</span>
+                  <span className="font-bold text-gray-900">{editingPresensi.nama_mahasiswa}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600 font-medium">Status Saat Ini:</span>
+                  {getStatusBadge(editingPresensi.status)}
+                </div>
+              </div>
+            </div>
+
+            {/* Form Edit */}
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Status Baru <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={editForm.status}
+                onChange={(e) => setEditForm({...editForm, status: e.target.value})}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="Hadir">Hadir</option>
+                <option value="Belum Absen">Belum Absen</option>
+                <option value="Alfa">Alfa</option>
+              </select>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={handleCancelEdit}
+                className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2.5 rounded-lg font-semibold transition flex items-center justify-center gap-2"
+              >
+                <X className="h-4 w-4" />
+                Batal
+              </button>
+              <button
+                onClick={handleSaveEditStatus}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-semibold transition flex items-center justify-center gap-2"
+              >
+                <Save className="h-4 w-4" />
+                Simpan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add CSS Animations if not already present */}
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes scaleIn {
+          from { transform: scale(0.9); opacity: 0; }
+          to { transform: scale(1); opacity: 1; }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.2s ease-out;
+        }
+        .animate-scaleIn {
+          animation: scaleIn 0.3s ease-out;
+        }
+      `}</style>
     </DashboardLayout>
   );
 }

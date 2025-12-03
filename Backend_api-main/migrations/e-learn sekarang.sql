@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Dec 02, 2025 at 11:44 AM
+-- Generation Time: Dec 03, 2025 at 03:09 PM
 -- Server version: 8.0.30
 -- PHP Version: 8.2.28
 
@@ -158,7 +158,9 @@ CREATE TABLE `jadwal_kuliah` (
 INSERT INTO `jadwal_kuliah` (`id_jadwal`, `id_kelas_mk`, `hari`, `jam_mulai`, `jam_selesai`, `ruangan`, `created_at`, `updated_at`) VALUES
 (1, 1, 'Senin', '08:00:00', '09:40:00', 'R-201', '2025-11-27 12:50:14', '2025-11-27 12:50:27'),
 (2, 2, 'Senin', '10:00:00', '11:40:00', 'R-202', '2025-11-27 12:50:14', '2025-11-27 12:50:27'),
-(3, 3, 'Selasa', '08:00:00', '09:40:00', 'Lab-1', '2025-11-27 12:50:14', '2025-11-27 12:50:27');
+(3, 3, 'Selasa', '08:00:00', '09:40:00', 'Lab-1', '2025-11-27 12:50:14', '2025-11-27 12:50:27'),
+(4, 1, 'Kamis', '20:44:00', '22:44:00', 'Lab RSI', '2025-12-02 12:44:50', '2025-12-02 12:44:50'),
+(5, 7, 'Rabu', '21:48:00', '23:48:00', 'Space', '2025-12-02 12:48:11', '2025-12-02 12:48:11');
 
 -- --------------------------------------------------------
 
@@ -210,7 +212,8 @@ CREATE TABLE `kelas` (
 INSERT INTO `kelas` (`id_kelas`, `nama_kelas`, `prodi`, `tahun_angkatan`, `golongan`, `created_at`, `updated_at`) VALUES
 (1, 'TIF-2023-A', 'TIF', 2023, 'A', '2025-11-27 12:50:14', '2025-11-27 12:50:14'),
 (2, 'MIF-2022-B', 'MIF', 2022, 'B', '2025-11-27 12:50:14', '2025-11-27 12:50:14'),
-(3, 'TKK-2023-A', 'TKK', 2023, 'A', '2025-11-27 12:50:14', '2025-11-27 12:50:14');
+(3, 'TKK-2023-A', 'TKK', 2023, 'A', '2025-11-27 12:50:14', '2025-11-27 12:50:14'),
+(4, 'MIF-2024-A', 'MIF', 2024, 'A', '2025-12-02 12:12:57', '2025-12-02 12:13:06');
 
 -- --------------------------------------------------------
 
@@ -239,7 +242,8 @@ INSERT INTO `kelas_mata_kuliah` (`id_kelas_mk`, `kode_mk`, `id_kelas`, `id_dosen
 (2, 'BS001', 2, 1, '2024/2025', 'Ganjil', 'Aktif', '2025-11-27 12:50:27', '2025-11-27 12:50:27'),
 (3, 'TK001', 3, 2, '2024/2025', 'Ganjil', 'Aktif', '2025-11-27 12:50:27', '2025-11-27 12:50:27'),
 (4, 'BD001', 2, 3, '2025/2026', 'Ganjil', 'Aktif', '2025-11-27 15:52:02', '2025-11-27 15:52:02'),
-(6, 'BD001', 1, 2, '2025/2026', 'Ganjil', 'Aktif', '2025-11-27 16:36:07', '2025-11-27 16:37:28');
+(6, 'BD001', 1, 2, '2025/2026', 'Ganjil', 'Aktif', '2025-11-27 16:36:07', '2025-11-27 16:37:28'),
+(7, 'ML001', 4, 3, '2024/2025', 'Genap', 'Aktif', '2025-12-02 12:47:52', '2025-12-02 12:47:52');
 
 -- --------------------------------------------------------
 
@@ -274,7 +278,7 @@ INSERT INTO `mahasiswa` (`id_mahasiswa`, `user_id`, `nim`, `nama`, `id_kelas`, `
 (3, 6, 'E51253310', 'Mahasiswa MIF 1', 2, 'Malang', '2004-07-15', 'L', 'Islam', 'Jl. Mahasiswa No. 3, Malang', '082133333333', 'mhs3@kampus.ac.id', '2025-11-27 12:50:14', '2025-11-27 12:50:14'),
 (4, 7, 'E51253311', 'Mahasiswa MIF 2', 2, 'Malang', '2004-09-25', 'P', 'Kristen', 'Jl. Mahasiswa No. 4, Malang', '082144444444', 'mhs4@kampus.ac.id', '2025-11-27 12:50:14', '2025-11-27 12:50:14'),
 (5, 8, 'E61253310', 'Mahasiswa TKK 1', 3, 'Gresik', '2005-01-18', 'L', 'Islam', 'Jl. Mahasiswa No. 5, Gresik', '082155555555', 'mhs5@kampus.ac.id', '2025-11-27 12:50:14', '2025-11-27 12:50:14'),
-(6, 10, 'eb3b3k404', 'BebekMaha', 2, '', '2000-01-01', 'L', '', '', '', NULL, '2025-11-28 10:28:35', '2025-11-28 10:28:35');
+(6, 10, 'eb3b3k404', 'BebekMaha', 4, '', '2000-01-01', 'L', '', '', '', NULL, '2025-11-28 10:28:35', '2025-12-02 13:16:54');
 
 -- --------------------------------------------------------
 
@@ -299,6 +303,7 @@ CREATE TABLE `mata_kuliah` (
 INSERT INTO `mata_kuliah` (`kode_mk`, `nama_mk`, `sks`, `semester`, `deskripsi`, `created_at`, `updated_at`) VALUES
 ('BD001', 'Basis Data', 3, 3, NULL, '2025-11-27 12:50:14', '2025-11-27 12:50:14'),
 ('BS001', 'Bisnis', 2, 4, NULL, '2025-11-27 12:50:14', '2025-11-27 12:50:14'),
+('ML001', 'Machine Learning', 2, 4, NULL, '2025-12-02 11:53:44', '2025-12-02 11:54:16'),
 ('TK001', 'Teknik Komputasi', 3, 5, NULL, '2025-11-27 12:50:14', '2025-11-27 12:50:14');
 
 -- --------------------------------------------------------
@@ -443,7 +448,8 @@ INSERT INTO `presensi` (`id_presensi`, `id_mahasiswa`, `id_kelas_mk`, `tanggal`,
 (4, 2, 1, '2025-11-25', 2, '15:35:00', '16:35:00', 'Alfa', NULL, NULL, 0, NULL, NULL, NULL, NULL),
 (7, 3, 2, '2025-11-28', 3, '21:02:00', '23:02:00', 'Belum Absen', NULL, NULL, 0, NULL, NULL, NULL, NULL),
 (8, 4, 2, '2025-11-28', 3, '21:02:00', '23:02:00', 'Belum Absen', NULL, NULL, 0, NULL, NULL, NULL, NULL),
-(9, 6, 2, '2025-11-28', 3, '21:02:00', '23:02:00', 'Belum Absen', NULL, NULL, 0, NULL, NULL, NULL, NULL);
+(9, 6, 2, '2025-11-28', 3, '21:02:00', '23:02:00', 'Belum Absen', NULL, NULL, 0, NULL, NULL, NULL, NULL),
+(10, 6, 7, '2025-12-03', 5, '21:17:00', '21:17:00', 'Belum Absen', NULL, NULL, 0, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -633,19 +639,19 @@ ALTER TABLE `informasi`
 -- AUTO_INCREMENT for table `jadwal_kuliah`
 --
 ALTER TABLE `jadwal_kuliah`
-  MODIFY `id_jadwal` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id_jadwal` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `kelas`
 --
 ALTER TABLE `kelas`
-  MODIFY `id_kelas` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id_kelas` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `kelas_mata_kuliah`
 --
 ALTER TABLE `kelas_mata_kuliah`
-  MODIFY `id_kelas_mk` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id_kelas_mk` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `mahasiswa`
@@ -663,7 +669,7 @@ ALTER TABLE `materi`
 -- AUTO_INCREMENT for table `presensi`
 --
 ALTER TABLE `presensi`
-  MODIFY `id_presensi` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id_presensi` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `users`

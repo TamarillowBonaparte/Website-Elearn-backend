@@ -207,11 +207,13 @@ def get_presensi_detail(
     """
     
     # Auto-update status Belum Absen menjadi Alfa jika sudah melewati waktu_selesai
+    # KECUALI jika admin sudah edit manual (ditandai dengan keterangan tidak kosong)
     current_datetime = datetime.now()
     current_date = current_datetime.date()
     current_time = current_datetime.time()
     
     # Update status yang masih "Belum Absen" menjadi "Alfa" jika sudah lewat waktu
+    # DAN keterangan masih kosong (artinya belum di-edit manual oleh admin)
     presensi_list_check = db.query(Presensi).filter(
         and_(
             Presensi.id_kelas_mk == id_kelas_mk,
@@ -221,7 +223,11 @@ def get_presensi_detail(
         )
     ).all()
     
+    # Filter dan update: hanya yang keterangan-nya kosong
     for presensi in presensi_list_check:
+        # Skip jika ada keterangan (admin sudah edit)
+        if presensi.keterangan:
+            continue
         # Jika tanggal presensi sudah lewat ATAU tanggal sama tapi waktu sudah lewat waktu_selesai
         if presensi.tanggal < current_date or \
            (presensi.tanggal == current_date and presensi.waktu_selesai and current_time > presensi.waktu_selesai):
@@ -238,6 +244,7 @@ def get_presensi_detail(
             p.waktu_input,
             p.waktu_mulai,
             p.waktu_selesai,
+            p.keterangan,
             m.nim,
             m.nama
         FROM presensi p
@@ -280,7 +287,8 @@ def get_presensi_detail(
             status=result.status,
             waktu_input=result.waktu_input,
             waktu_mulai=waktu_mulai_str,
-            waktu_selesai=waktu_selesai_str
+            waktu_selesai=waktu_selesai_str,
+            keterangan=result.keterangan
         ))
     
     return response
@@ -321,6 +329,91 @@ def update_status_presensi(
         "data": {
             "id_presensi": presensi.id_presensi,
             "status": presensi.status,
+            "waktu_input": presensi.waktu_input
+        }
+    }
+
+
+@router.put("/admin/update-status/{id_presensi}")
+def admin_update_status_presensi(
+    id_presensi: int,
+    request: dict,
+    db: Session = Depends(get_db)
+):
+    """
+    Update status presensi mahasiswa oleh admin/super_admin
+    Simple update tanpa keterangan wajib
+    """
+    
+    status = request.get("status")
+    
+    print(f"🔍 DEBUG - Received request: {request}")
+    print(f"🔍 DEBUG - Status value: '{status}'")
+    print(f"🔍 DEBUG - ID Presensi: {id_presensi}")
+    
+    if not status or status not in ["Hadir", "Belum Absen", "Alfa"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Status tidak valid: '{status}'. Harus 'Hadir', 'Belum Absen', atau 'Alfa'"
+        )
+    
+    presensi = db.query(Presensi).filter(Presensi.id_presensi == id_presensi).first()
+    
+    if not presensi:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Presensi tidak ditemukan"
+        )
+    
+    # Update status
+    old_status = presensi.status
+    print(f"🔍 DEBUG - Old status: '{old_status}' -> New status: '{status}'")
+    
+    presensi.status = status
+    
+    # Set keterangan otomatis untuk menandai admin sudah edit
+    # Ini akan mencegah auto-update Alfa menimpa edit manual
+    if not presensi.keterangan:
+        presensi.keterangan = "[Admin Edit]"
+    
+    # Update waktu_input jika status berubah menjadi Hadir
+    if status == "Hadir" and old_status != "Hadir":
+        presensi.waktu_input = datetime.now()
+    elif status != "Hadir":
+        # Reset waktu_input jika bukan Hadir
+        presensi.waktu_input = None
+    
+    try:
+        db.flush()  # Force write to database
+        db.commit()
+        db.refresh(presensi)
+        print(f"✅ DEBUG - Status updated successfully in DB: {presensi.status}")
+        print(f"✅ DEBUG - Presensi object after commit: id={presensi.id_presensi}, status={presensi.status}")
+        
+        # Verify in database with raw query
+        verify_query = text("SELECT status FROM presensi WHERE id_presensi = :id")
+        verify_result = db.execute(verify_query, {"id": id_presensi}).fetchone()
+        print(f"✅ DEBUG - Verified in DB with raw query: status={verify_result[0] if verify_result else 'NOT FOUND'}")
+        
+    except Exception as e:
+        db.rollback()
+        print(f"❌ DEBUG - Error committing: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error updating database: {str(e)}"
+        )
+    
+    # Get mahasiswa info for response
+    mahasiswa = db.query(Mahasiswa).filter(Mahasiswa.id_mahasiswa == presensi.id_mahasiswa).first()
+    
+    return {
+        "message": "Status presensi berhasil diupdate oleh admin",
+        "data": {
+            "id_presensi": presensi.id_presensi,
+            "nim": mahasiswa.nim if mahasiswa else None,
+            "nama": mahasiswa.nama if mahasiswa else None,
+            "old_status": old_status,
+            "new_status": presensi.status,
             "waktu_input": presensi.waktu_input
         }
     }
@@ -423,11 +516,13 @@ def get_presensi_mahasiswa(
         )
     
     # Auto-update status Belum Absen menjadi Alfa jika sudah lewat waktu
+    # KECUALI jika admin sudah edit manual (ditandai dengan keterangan tidak kosong)
     current_datetime = datetime.now()
     current_date = current_datetime.date()
     current_time = current_datetime.time()
     
     # Update status yang masih "Belum Absen" menjadi "Alfa" jika sudah lewat waktu
+    # DAN keterangan masih kosong (artinya belum di-edit manual oleh admin)
     presensi_list_check = db.query(Presensi).filter(
         and_(
             Presensi.id_mahasiswa == id_mahasiswa,
@@ -435,7 +530,11 @@ def get_presensi_mahasiswa(
         )
     ).all()
     
+    # Filter dan update: hanya yang keterangan-nya kosong
     for presensi in presensi_list_check:
+        # Skip jika ada keterangan (admin sudah edit)
+        if presensi.keterangan:
+            continue
         # Jika tanggal presensi sudah lewat ATAU tanggal sama tapi waktu sudah lewat waktu_selesai
         if presensi.tanggal < current_date or \
            (presensi.tanggal == current_date and presensi.waktu_selesai and current_time > presensi.waktu_selesai):
