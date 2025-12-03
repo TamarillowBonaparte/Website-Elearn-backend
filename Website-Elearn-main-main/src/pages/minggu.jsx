@@ -28,6 +28,8 @@ export default function ViewMinggu() {
   const [showSkorModal, setShowSkorModal] = useState(false);
   const [skorData, setSkorData] = useState(null);
   const [loadingSkor, setLoadingSkor] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const { kodeMk } = useParams();
   const navigate = useNavigate();
 
@@ -223,18 +225,22 @@ export default function ViewMinggu() {
   };
 
   // Delete materi
-  const handleDelete = async (materiData) => {
-    if (!window.confirm(`Apakah Anda yakin ingin menghapus materi "${materiData.judul}"?`)) {
-      return;
-    }
+  const handleDeleteClick = (materiData) => {
+    setDeleteTarget(materiData);
+    setShowDeleteModal(true);
+  };
 
+  const handleDeleteConfirm = async () => {
     try {
-      await apiDelete(`/materi/${materiData.id_materi}`);
+      await apiDelete(`/materi/${deleteTarget.id_materi}`);
       showNotification('success', 'Materi berhasil dihapus!');
       fetchMateri();
     } catch (error) {
       console.error("Error deleting materi:", error);
       showNotification('error', 'Gagal menghapus materi');
+    } finally {
+      setShowDeleteModal(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -482,7 +488,7 @@ export default function ViewMinggu() {
                             Edit
                           </button>
                           <button
-                            onClick={() => handleDelete(materi)}
+                            onClick={() => handleDeleteClick(materi)}
                             className="flex-1 bg-red-500 hover:bg-red-600 text-white px-2 py-1.5 rounded text-xs flex items-center justify-center gap-1 transition"
                           >
                             <Trash2 className="h-3 w-3" />
@@ -791,6 +797,42 @@ export default function ViewMinggu() {
                 Tidak ada data
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, margin: 0}} className="w-screen h-screen bg-black/60 flex items-center justify-center z-[100] backdrop-blur-sm">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-red-100 p-3 rounded-full">
+                <AlertCircle className="h-6 w-6 text-red-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-800">Konfirmasi Hapus</h3>
+            </div>
+            <p className="text-gray-600 mb-6">
+              Apakah Anda yakin ingin menghapus materi <span className="font-semibold text-gray-900">"{deleteTarget?.judul}"</span>?
+              <br />
+              <span className="text-sm text-red-600 mt-2 block">Tindakan ini tidak dapat dibatalkan.</span>
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setDeleteTarget(null);
+                }}
+                className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition"
+              >
+                Hapus
+              </button>
+            </div>
           </div>
         </div>
       )}

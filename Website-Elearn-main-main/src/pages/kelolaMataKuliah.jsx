@@ -14,6 +14,8 @@ export default function KelolaMataKuliah() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedMK, setSelectedMK] = useState(null);
   const [notification, setNotification] = useState({ show: false, type: '', message: '' });
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   
   const [formData, setFormData] = useState({
     kode_mk: '',
@@ -134,14 +136,17 @@ export default function KelolaMataKuliah() {
     }
   };
 
-  const handleDelete = async (kode_mk, nama_mk) => {
-    if (!window.confirm(`Apakah Anda yakin ingin menghapus mata kuliah "${nama_mk}"?`)) {
-      return;
-    }
+  const handleDeleteClick = (kode_mk, nama_mk) => {
+    setDeleteTarget({ kode_mk, nama_mk });
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
 
     try {
       const token = localStorage.getItem("token");
-      await axios.delete(`${API_BASE_URL}/mata-kuliah/${kode_mk}`, {
+      await axios.delete(`${API_BASE_URL}/mata-kuliah/${deleteTarget.kode_mk}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -150,6 +155,9 @@ export default function KelolaMataKuliah() {
     } catch (error) {
       console.error("Error deleting mata kuliah:", error);
       showNotification('error', error.response?.data?.detail || 'Gagal menghapus mata kuliah');
+    } finally {
+      setShowDeleteModal(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -246,7 +254,7 @@ export default function KelolaMataKuliah() {
                             <Edit className="h-4 w-4" /> Edit
                           </button>
                           <button
-                            onClick={() => handleDelete(mk.kode_mk, mk.nama_mk)}
+                            onClick={() => handleDeleteClick(mk.kode_mk, mk.nama_mk)}
                             disabled={loading}
                             className="text-red-600 hover:text-red-800 flex items-center gap-1 disabled:opacity-50"
                             title="Hapus Mata Kuliah"
@@ -381,6 +389,42 @@ export default function KelolaMataKuliah() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, margin: 0}} className="w-screen h-screen bg-black/60 flex items-center justify-center z-[100] backdrop-blur-sm">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-red-100 p-3 rounded-full">
+                <AlertCircle className="h-6 w-6 text-red-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-800">Konfirmasi Hapus</h3>
+            </div>
+            <p className="text-gray-600 mb-6">
+              Apakah Anda yakin ingin menghapus mata kuliah <span className="font-semibold text-gray-900">"{deleteTarget?.nama_mk}"</span>?
+              <br />
+              <span className="text-sm text-red-600 mt-2 block">Tindakan ini tidak dapat dibatalkan.</span>
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setDeleteTarget(null);
+                }}
+                className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition"
+              >
+                Hapus
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -25,6 +25,8 @@ export default function UserPage() {
   const [loggedUser, setLoggedUser] = useState(null);
   const [showTokenWarning, setShowTokenWarning] = useState(false);
   const [notification, setNotification] = useState({ show: false, type: '', message: '' });
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [currentUser, setCurrentUser] = useState({
     id_user: null,
     nama: "",
@@ -189,19 +191,26 @@ export default function UserPage() {
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm("Yakin ingin menghapus pengguna ini?")) {
-      try {
-        setIsLoading(true);
-        await apiDelete(`/users/${id}`);
-        await fetchUsers(); // Refresh list
-        showNotification('success', "Pengguna berhasil dihapus");
-      } catch (error) {
-        console.error("Error deleting user:", error);
-        showNotification('error', "Gagal menghapus pengguna: " + error.message);
-      } finally {
-        setIsLoading(false);
-      }
+  const handleDeleteClick = (id, nama) => {
+    setDeleteTarget({ id, nama });
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+
+    try {
+      setIsLoading(true);
+      await apiDelete(`/users/${deleteTarget.id}`);
+      await fetchUsers(); // Refresh list
+      showNotification('success', "Pengguna berhasil dihapus");
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      showNotification('error', "Gagal menghapus pengguna: " + error.message);
+    } finally {
+      setIsLoading(false);
+      setShowDeleteModal(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -469,7 +478,7 @@ export default function UserPage() {
                           </button>
                           {user.role !== "Super Admin" ? (
                             <button
-                              onClick={() => handleDelete(user.id_user)}
+                              onClick={() => handleDeleteClick(user.id_user, user.nama)}
                               disabled={isLoading}
                               className="text-red-600 hover:text-red-800 flex items-center gap-1 disabled:opacity-50"
                             >
@@ -698,6 +707,43 @@ export default function UserPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed top-0 left-0 right-0 bottom-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-[9999]">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-red-100 p-3 rounded-full">
+                <AlertCircle className="h-6 w-6 text-red-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-800">Konfirmasi Hapus</h3>
+            </div>
+            <p className="text-gray-600 mb-6">
+              Apakah Anda yakin ingin menghapus pengguna <span className="font-semibold text-gray-900">"{deleteTarget?.nama}"</span>?
+              <br />
+              <span className="text-sm text-red-600 mt-2 block">Tindakan ini tidak dapat dibatalkan.</span>
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setDeleteTarget(null);
+                }}
+                className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                disabled={isLoading}
+                className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition disabled:opacity-50"
+              >
+                {isLoading ? 'Menghapus...' : 'Hapus'}
+              </button>
+            </div>
           </div>
         </div>
       )}
