@@ -66,28 +66,49 @@ export default function MateriEyeTracking({ route, navigation }) {
   
   
   const getPdfSource = () => {
+    console.log('[PDF] Getting PDF source...');
+    console.log('[PDF] Materi data:', JSON.stringify(materi, null, 2));
+    
+    // Prioritas 1: Gunakan endpoint backend API untuk mengambil file dari uploads/materi
+    if (materi.id_materi || materi.id) {
+      const id = materi.id_materi || materi.id;
+      const pdfUrl = `${API_URL}/materi/file/${id}`;
+      console.log('[PDF] ✅ Using Backend API endpoint:', pdfUrl);
+      return {
+        uri: pdfUrl,
+        cache: true,
+      };
+    }
+    
+    // Prioritas 2: URL langsung
     if (materi.pdfUrl) {
+      console.log('[PDF] ✅ Using direct URL:', materi.pdfUrl);
       return {
         uri: materi.pdfUrl,
         cache: true,
       };
     }
     
+    // Prioritas 3: Local path
     if (materi.localPdfPath) {
+      console.log('[PDF] ✅ Using local path:', materi.localPdfPath);
       return {
         uri: materi.localPdfPath,
         cache: true,
       };
     }
 
+    // Prioritas 4: Base64
     if (materi.pdfBase64) {
+      console.log('[PDF] ✅ Using base64 data');
       return {
         uri: `data:application/pdf;base64,${materi.pdfBase64}`,
         cache: false,
       };
     }
 
-    // Sample PDF for testing
+    // Fallback: Sample PDF for testing
+    console.log('[PDF] ⚠️ No PDF source found, using fallback dummy PDF');
     return {
       uri: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
       cache: true,
@@ -100,6 +121,10 @@ export default function MateriEyeTracking({ route, navigation }) {
     setIsLoadingPDF(false);
     setPdfError(null);
     
+    // Set halaman awal ke 1
+    setCurrentPage(1);
+    pageStartTime.current = Date.now();
+    
     const initialTimePerPage = {};
     for (let i = 1; i <= numberOfPages; i++) {
       initialTimePerPage[i] = 0;
@@ -108,6 +133,7 @@ export default function MateriEyeTracking({ route, navigation }) {
     setTrackingData(prev => ({
       ...prev,
       timePerPage: initialTimePerPage,
+      pagesRead: [1], // Halaman 1 sudah dibaca saat PDF dibuka
     }));
   };
 
@@ -117,6 +143,11 @@ export default function MateriEyeTracking({ route, navigation }) {
     const timeSpent = Math.floor((Date.now() - pageStartTime.current) / 1000);
     
     setIsLoadingPDF(false);
+    
+    // Update total pages jika belum di-set
+    if (totalPages === 0 && numberOfPages > 0) {
+      setTotalPages(numberOfPages);
+    }
     
     setTrackingData(prev => {
       const newData = { ...prev };
@@ -220,7 +251,7 @@ export default function MateriEyeTracking({ route, navigation }) {
 
     console.log('Saving tracking data:', finalData);
 
-    // Simpan ke database
+    // Simpan ke database (hanya field yang ada di database)
     const dbPayload = {
       id_mahasiswa: route.params?.id_mahasiswa ?? 1,
       id_materi: materi?.id_materi ?? materi?.id ?? 1,
@@ -228,9 +259,6 @@ export default function MateriEyeTracking({ route, navigation }) {
       waktu_fokus: trackingData.focusTime,
       jumlah_gangguan: trackingData.distractionCount,
       skor_perhatian: trackingData.attentionScore,
-      progress_scroll: readingProgress,
-      halaman_terakhir: currentPage,
-      total_halaman: totalPages,
       tracking_mode: cameraPermission ? 'camera' : 'simulated',
       session_start: new Date(startTime.current).toISOString(),
       session_end: new Date().toISOString(),
@@ -857,8 +885,8 @@ export default function MateriEyeTracking({ route, navigation }) {
 
         <Pdf
           ref={pdfRef}
-          trustAllCerts={true}
           source={getPdfSource()}
+          trustAllCerts={false}
           onLoadComplete={handlePdfLoadComplete}
           onPageChanged={handlePageChanged}
           onError={handlePdfError}
@@ -887,7 +915,7 @@ export default function MateriEyeTracking({ route, navigation }) {
 
         <View style={styles.pageIndicator}>
           <Text style={styles.pageText}>
-            📄 Halaman {currentPage} dari {totalPages}
+            📄 Halaman {currentPage} dari {totalPages || '...'}
           </Text>
           <Text style={styles.pagesReadText}>
             Dibaca: {trackingData.pagesRead.length} halaman

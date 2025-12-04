@@ -220,6 +220,50 @@ export default function UserPage() {
 
     try {
       if (formMode === "add") {
+        // Validation: Check required fields
+        if (!currentUser.nama.trim()) {
+          showNotification('error', "Nama lengkap wajib diisi");
+          setIsLoading(false);
+          return;
+        }
+        if (!currentUser.username.trim()) {
+          showNotification('error', "Username wajib diisi");
+          setIsLoading(false);
+          return;
+        }
+        if (!currentUser.email.trim()) {
+          showNotification('error', "Email wajib diisi");
+          setIsLoading(false);
+          return;
+        }
+        if (!currentUser.password.trim()) {
+          showNotification('error', "Password wajib diisi");
+          setIsLoading(false);
+          return;
+        }
+        
+        // Role-specific validation
+        if (currentUser.role === "admin" || currentUser.role === "super_admin") {
+          if (!currentUser.nip.trim()) {
+            showNotification('error', "NIP wajib diisi untuk role Admin/Super Admin");
+            setIsLoading(false);
+            return;
+          }
+        }
+        
+        if (currentUser.role === "mahasiswa") {
+          if (!currentUser.nim.trim()) {
+            showNotification('error', "NIM wajib diisi untuk role Mahasiswa");
+            setIsLoading(false);
+            return;
+          }
+          if (!currentUser.id_kelas) {
+            showNotification('error', "Kelas wajib dipilih untuk role Mahasiswa");
+            setIsLoading(false);
+            return;
+          }
+        }
+        
         // Validation: Check if trying to create super_admin when not logged as super_admin
         if (currentUser.role === "super_admin" && loggedUser?.role !== "super_admin") {
           showNotification('error', "Hanya Super Admin yang dapat membuat akun Super Admin baru");
@@ -269,6 +313,45 @@ export default function UserPage() {
         }
         showNotification('success', "Pengguna berhasil ditambahkan");
       } else {
+        // Validation for edit mode
+        if (!currentUser.nama.trim()) {
+          showNotification('error', "Nama lengkap wajib diisi");
+          setIsLoading(false);
+          return;
+        }
+        if (!currentUser.username.trim()) {
+          showNotification('error', "Username wajib diisi");
+          setIsLoading(false);
+          return;
+        }
+        if (!currentUser.email.trim()) {
+          showNotification('error', "Email wajib diisi");
+          setIsLoading(false);
+          return;
+        }
+        
+        // Role-specific validation for edit
+        if (currentUser.role === "admin" || currentUser.role === "super_admin") {
+          if (!currentUser.nip.trim()) {
+            showNotification('error', "NIP wajib diisi untuk role Admin/Super Admin");
+            setIsLoading(false);
+            return;
+          }
+        }
+        
+        if (currentUser.role === "mahasiswa") {
+          if (!currentUser.nim.trim()) {
+            showNotification('error', "NIM wajib diisi untuk role Mahasiswa");
+            setIsLoading(false);
+            return;
+          }
+          if (!currentUser.id_kelas) {
+            showNotification('error', "Kelas wajib dipilih untuk role Mahasiswa");
+            setIsLoading(false);
+            return;
+          }
+        }
+        
         // Update existing user
         if (currentUser.role === "admin") {
           // Update dosen
@@ -522,7 +605,7 @@ export default function UserPage() {
 
       {/* Modal Form */}
       {isModalOpen && (
-        <div className="fixed top-0 left-0 right-0 bottom-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-[9999]">
+        <div className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-[9999] p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 relative max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-semibold mb-4 text-gray-800">
               {formMode === "add" ? "Tambah Pengguna" : "Edit Pengguna"}
@@ -531,7 +614,7 @@ export default function UserPage() {
               {/* Nama */}
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Nama Lengkap
+                  Nama Lengkap <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -548,7 +631,7 @@ export default function UserPage() {
               {/* Username */}
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Username
+                  Username <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -565,7 +648,7 @@ export default function UserPage() {
               {/* Email */}
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Email
+                  Email <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="email"
@@ -582,7 +665,7 @@ export default function UserPage() {
               {/* Password */}
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Password {formMode === "edit" && "(Kosongkan jika tidak ingin mengubah)"}
+                  Password {formMode === "add" && <span className="text-red-500">*</span>} {formMode === "edit" && "(Kosongkan jika tidak ingin mengubah)"}
                 </label>
                 <input
                   type="password"
@@ -628,10 +711,11 @@ export default function UserPage() {
               {(currentUser.role === "admin" || currentUser.role === "super_admin") && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
-                    NIP (Nomor Induk Pegawai)
+                    NIP (Nomor Induk Pegawai) <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
+                    required
                     value={currentUser.nip}
                     onChange={(e) =>
                       setCurrentUser({ ...currentUser, nip: e.target.value })
@@ -648,23 +732,26 @@ export default function UserPage() {
                 <>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">
-                      NIM
+                      NIM <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
+                      required
                       value={currentUser.nim}
                       onChange={(e) =>
                         setCurrentUser({ ...currentUser, nim: e.target.value })
                       }
                       className="w-full border border-gray-300 rounded-lg p-2 mt-1 focus:ring-2 focus:ring-blue-500 outline-none"
                       disabled={isLoading}
+                      placeholder="Masukkan NIM"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">
-                      Kelas
+                      Kelas <span className="text-red-500">*</span>
                     </label>
                     <select
+                      required
                       value={currentUser.id_kelas || ""}
                       onChange={(e) =>
                         setCurrentUser({
@@ -713,8 +800,8 @@ export default function UserPage() {
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
-        <div className="fixed top-0 left-0 right-0 bottom-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-[9999]">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl">
+        <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-[9999] p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
             <div className="flex items-center gap-3 mb-4">
               <div className="bg-red-100 p-3 rounded-full">
                 <AlertCircle className="h-6 w-6 text-red-600" />

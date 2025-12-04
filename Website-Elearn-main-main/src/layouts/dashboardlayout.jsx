@@ -69,7 +69,7 @@ export default function DashboardLayout({
           </div>
 
           {/* Content Area - Flexible, mengambil sisa space */}
-          <div className="flex-1 space-y-8 min-w-0">{children}</div>
+          <div className="flex-1 min-w-0">{children}</div>
         </div>
       </div>
     </div>

@@ -178,10 +178,29 @@ export default function KelolaDosen() {
       });
       
       showNotification('success', 'Assignment berhasil dihapus');
-      fetchDosenAssignments(selectedDosen.nip);
+      fetchDosenAssignments(selectedDosen.id_dosen);
     } catch (error) {
       console.error("Error deleting assignment:", error);
       showNotification('error', 'Gagal menghapus assignment');
+    }
+  };
+
+  const handleToggleStatus = async (id_kelas_mk, currentStatus) => {
+    const newStatus = currentStatus === 'Aktif' ? 'Selesai' : 'Aktif';
+    
+    try {
+      const token = localStorage.getItem("token");
+      await axios.put(
+        `${API_BASE_URL}/kelas-mata-kuliah/${id_kelas_mk}`,
+        { status: newStatus },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      showNotification('success', `Status berhasil diubah menjadi ${newStatus}`);
+      fetchDosenAssignments(selectedDosen.id_dosen);
+    } catch (error) {
+      console.error("Error updating status:", error);
+      showNotification('error', error.response?.data?.detail || 'Gagal mengubah status');
     }
   };
 
@@ -491,30 +510,52 @@ export default function KelolaDosen() {
                   {assignments.map((assignment) => (
                     <div
                       key={assignment.id_kelas_mk}
-                      className="border border-gray-200 rounded-lg p-4 flex items-center justify-between hover:shadow-md transition"
+                      className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition"
                     >
-                      <div>
-                        <h5 className="font-semibold text-gray-800">
-                          {assignment.nama_mk} ({assignment.kode_mk})
-                        </h5>
-                        <p className="text-sm text-gray-600">
-                          {assignment.nama_kelas} • {assignment.prodi} • {assignment.tahun_ajaran} • Semester {assignment.semester_aktif}
-                        </p>
-                        <span className={`inline-block mt-1 text-xs px-2 py-1 rounded-full ${
-                          assignment.status === 'Aktif' 
-                            ? 'bg-green-100 text-green-700' 
-                            : 'bg-gray-100 text-gray-700'
-                        }`}>
-                          {assignment.status}
-                        </span>
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <h5 className="font-semibold text-gray-800">
+                            {assignment.nama_mk} ({assignment.kode_mk})
+                          </h5>
+                          <p className="text-sm text-gray-600">
+                            {assignment.nama_kelas} • {assignment.prodi} • {assignment.tahun_ajaran} • Semester {assignment.semester_aktif}
+                          </p>
+                          <span className={`inline-block mt-1 text-xs px-2 py-1 rounded-full ${
+                            assignment.status === 'Aktif' 
+                              ? 'bg-green-100 text-green-700' 
+                              : assignment.status === 'Selesai'
+                              ? 'bg-blue-100 text-blue-700'
+                              : 'bg-gray-100 text-gray-700'
+                          }`}>
+                            {assignment.status}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 ml-4">
+                          {/* Toggle Status Switch */}
+                          <button
+                            onClick={() => handleToggleStatus(assignment.id_kelas_mk, assignment.status)}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                              assignment.status === 'Aktif' ? 'bg-green-500' : 'bg-gray-300'
+                            }`}
+                            title={`Status: ${assignment.status}. Klik untuk mengubah ke ${assignment.status === 'Aktif' ? 'Selesai' : 'Aktif'}`}
+                          >
+                            <span
+                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                assignment.status === 'Aktif' ? 'translate-x-6' : 'translate-x-1'
+                              }`}
+                            />
+                          </button>
+                          
+                          {/* Delete Button */}
+                          <button
+                            onClick={() => handleDeleteAssignment(assignment.id_kelas_mk)}
+                            className="text-red-600 hover:text-red-800 flex items-center gap-1"
+                            title="Hapus Assignment"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
                       </div>
-                      <button
-                        onClick={() => handleDeleteAssignment(assignment.id_kelas_mk)}
-                        className="text-red-600 hover:text-red-800 flex items-center gap-1"
-                        title="Hapus Assignment"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
                     </div>
                   ))}
                 </div>

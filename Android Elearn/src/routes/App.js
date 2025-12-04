@@ -14,6 +14,10 @@ import HomeScreen from '../components/HomeScreen';
 import ProfileScreen from '../components/ProfileScreen';
 import CameraScreen from '../components/CameraScreen';
 import RiwayatPresensiScreen from '../components/RiwayatPresensi';
+import InformasiListScreen from '../components/InformasiList';
+import InformasiDetailScreen from '../components/InformasiDetail';
+import JadwalKuliahScreen from '../components/JadwalKuliah';
+import DaftarMateriScreen from '../components/DaftarMateri';
 import BottomNavigation from '../components/BottomNavigation';
 
 const Stack = createNativeStackNavigator();
@@ -36,6 +40,13 @@ const ProfileScreenWithNav = ({ navigation }) => (
 const RiwayatPresensiScreenWithNav = ({ navigation }) => (
   <View style={styles.screenContainer}>
     <RiwayatPresensiScreen navigation={navigation} />
+    <BottomNavigation />
+  </View>
+);
+
+const JadwalKuliahScreenWithNav = ({ navigation }) => (
+  <View style={styles.screenContainer}>
+    <JadwalKuliahScreen navigation={navigation} />
     <BottomNavigation />
   </View>
 );
@@ -128,6 +139,10 @@ const App = () => {
         <Stack.Screen name="MateriEyeTracking" component={MateriEyeTrackingScreen} />
         <Stack.Screen name="TrainingFace" component={FaceCaptureScreen} />
         <Stack.Screen name="RiwayatPresensi" component={RiwayatPresensiScreenWithNav} />
+        <Stack.Screen name="InformasiList" component={InformasiListScreen} />
+        <Stack.Screen name="InformasiDetail" component={InformasiDetailScreen} />
+        <Stack.Screen name="JadwalKuliah" component={JadwalKuliahScreenWithNav} />
+        <Stack.Screen name="DaftarMateri" component={DaftarMateriScreen} />
         {/* ✅ sudah didaftarkan */}
       </Stack.Navigator>
     </NavigationContainer>

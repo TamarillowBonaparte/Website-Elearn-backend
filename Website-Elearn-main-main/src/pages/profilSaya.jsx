@@ -42,7 +42,6 @@ export default function ProfilSaya() {
     }
     
     fetchMyProfile();
-    fetchMyAssignments();
   }, []);
 
   const fetchMyProfile = async () => {
@@ -70,6 +69,9 @@ export default function ProfilSaya() {
           agama: myDosen.agama || '',
           alamat: myDosen.alamat || ''
         });
+        
+        // Fetch assignments after we have id_dosen
+        fetchMyAssignments(myDosen.id_dosen);
       }
     } catch (error) {
       console.error("Error fetching profile:", error);
@@ -79,7 +81,7 @@ export default function ProfilSaya() {
     }
   };
 
-  const fetchMyAssignments = async () => {
+  const fetchMyAssignments = async (idDosen) => {
     try {
       const token = localStorage.getItem("token");
       
@@ -88,9 +90,10 @@ export default function ProfilSaya() {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      // Filter assignments for current dosen
-      const myAssignments = response.data.filter(a => a.id_dosen === currentUser.id_dosen);
+      // Filter assignments for current dosen using the passed id_dosen
+      const myAssignments = response.data.filter(a => a.id_dosen === idDosen);
       setAssignments(myAssignments);
+      console.log("My assignments:", myAssignments); // Debug log
     } catch (error) {
       console.error("Error fetching assignments:", error);
       setAssignments([]);
@@ -103,7 +106,7 @@ export default function ProfilSaya() {
     try {
       const token = localStorage.getItem("token");
       await axios.put(
-        `${API_BASE_URL}/users/dosen/${currentUser.id_user}`,
+        `${API_BASE_URL}/users/dosen/me/profile`,
         editFormData,
         { headers: { Authorization: `Bearer ${token}` } }
       );

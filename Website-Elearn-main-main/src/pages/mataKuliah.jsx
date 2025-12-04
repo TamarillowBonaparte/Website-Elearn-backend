@@ -302,7 +302,11 @@ export default function MataKuliah() {
                     <td className="py-3 px-4 text-center">{kmk.semester_aktif}</td>
                     <td className="py-3 px-4 text-center">
                       <span className={`inline-block px-2 py-1 rounded text-xs font-bold ${
-                        kmk.status === 'Aktif' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                        kmk.status === 'Aktif' 
+                          ? 'bg-green-100 text-green-700' 
+                          : kmk.status === 'Selesai'
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'bg-gray-100 text-gray-600'
                       }`}>
                         {kmk.status}
                       </span>
@@ -453,7 +457,8 @@ export default function MataKuliah() {
                   required
                 >
                   <option value="Aktif">Aktif</option>
-                  <option value="Nonaktif">Nonaktif</option>
+                  <option value="Selesai">Selesai</option>
+                  <option value="Batal">Batal</option>
                 </select>
               </div>
 
