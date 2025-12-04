@@ -1,28 +1,31 @@
+````markdown
 # Informasi Feature Documentation
 
 ## Overview
+
 Fitur untuk mengelola informasi/pengumuman yang ditampilkan di mobile app. Admin dan Super Admin dapat membuat, mengedit, dan menghapus informasi. User (mahasiswa dan dosen) dapat melihat informasi yang aktif sesuai dengan role mereka.
 
 ## Database Schema
 
 ### Table: `informasi`
 
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | SERIAL | Primary key (auto-increment) |
-| `judul` | VARCHAR(255) | Judul informasi |
-| `deskripsi` | TEXT | Konten/deskripsi informasi |
-| `gambar_url` | VARCHAR(500) | URL gambar informasi (optional) |
-| `is_active` | BOOLEAN | Status aktif (TRUE = ditampilkan) |
-| `priority` | INTEGER | Prioritas tampil (0-100, lebih tinggi = lebih atas) |
-| `tanggal_mulai` | TIMESTAMP | Tanggal mulai ditampilkan (NULL = langsung tampil) |
-| `tanggal_selesai` | TIMESTAMP | Tanggal berhenti ditampilkan (NULL = tidak ada batas) |
-| `target_role` | ENUM | Target audience ('all', 'mahasiswa', 'dosen') |
-| `created_by` | INTEGER | User ID yang membuat (FK ke user.id) |
-| `created_at` | TIMESTAMP | Timestamp pembuatan |
-| `updated_at` | TIMESTAMP | Timestamp update terakhir (auto-update via trigger) |
+| Column            | Type         | Description                                           |
+| ----------------- | ------------ | ----------------------------------------------------- |
+| `id`              | SERIAL       | Primary key (auto-increment)                          |
+| `judul`           | VARCHAR(255) | Judul informasi                                       |
+| `deskripsi`       | TEXT         | Konten/deskripsi informasi                            |
+| `gambar_url`      | VARCHAR(500) | URL gambar informasi (optional)                       |
+| `is_active`       | BOOLEAN      | Status aktif (TRUE = ditampilkan)                     |
+| `priority`        | INTEGER      | Prioritas tampil (0-100, lebih tinggi = lebih atas)   |
+| `tanggal_mulai`   | TIMESTAMP    | Tanggal mulai ditampilkan (NULL = langsung tampil)    |
+| `tanggal_selesai` | TIMESTAMP    | Tanggal berhenti ditampilkan (NULL = tidak ada batas) |
+| `target_role`     | ENUM         | Target audience ('all', 'mahasiswa', 'dosen')         |
+| `created_by`      | INTEGER      | User ID yang membuat (FK ke user.id)                  |
+| `created_at`      | TIMESTAMP    | Timestamp pembuatan                                   |
+| `updated_at`      | TIMESTAMP    | Timestamp update terakhir (auto-update via trigger)   |
 
 ### Indexes
+
 - `idx_informasi_is_active` - untuk filter aktif/tidak aktif
 - `idx_informasi_priority` - untuk sorting berdasarkan prioritas
 - `idx_informasi_created_at` - untuk sorting berdasarkan tanggal
@@ -35,6 +38,7 @@ Fitur untuk mengelola informasi/pengumuman yang ditampilkan di mobile app. Admin
 ### Admin Routes (Super Admin & Admin Only)
 
 #### 1. Create Informasi
+
 ```http
 POST /api/informasi/
 Authorization: Bearer <token>
@@ -52,6 +56,7 @@ Content-Type: application/json
 ```
 
 **Response:**
+
 ```json
 {
   "id": 1,
@@ -70,6 +75,7 @@ Content-Type: application/json
 ```
 
 #### 2. Upload Gambar
+
 ```http
 POST /api/informasi/upload-gambar
 Authorization: Bearer <token>
@@ -79,6 +85,7 @@ file: <image_file>  // max 5MB, .jpg, .jpeg, .png, .gif, .webp
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -88,12 +95,14 @@ file: <image_file>  // max 5MB, .jpg, .jpeg, .png, .gif, .webp
 ```
 
 #### 3. Get All Informasi (Admin)
+
 ```http
 GET /api/informasi/admin/list?page=1&per_page=10&is_active=true&target_role=all&search=keyword
 Authorization: Bearer <token>
 ```
 
 **Query Parameters:**
+
 - `page` (default: 1) - halaman
 - `per_page` (default: 10) - jumlah per halaman
 - `is_active` (optional) - filter aktif/tidak
@@ -101,6 +110,7 @@ Authorization: Bearer <token>
 - `search` (optional) - search judul atau deskripsi
 
 **Response:**
+
 ```json
 {
   "total": 50,
@@ -112,12 +122,14 @@ Authorization: Bearer <token>
 ```
 
 #### 4. Get Informasi by ID (Admin)
+
 ```http
 GET /api/informasi/admin/{informasi_id}
 Authorization: Bearer <token>
 ```
 
 #### 5. Update Informasi
+
 ```http
 PUT /api/informasi/{informasi_id}
 Authorization: Bearer <token>
@@ -133,6 +145,7 @@ Content-Type: application/json
 ```
 
 #### 6. Delete Informasi
+
 ```http
 DELETE /api/informasi/{informasi_id}
 Authorization: Bearer <token>
@@ -141,18 +154,21 @@ Authorization: Bearer <token>
 ### Mobile App Routes (All Authenticated Users)
 
 #### 1. Get Active Informasi List
+
 ```http
 GET /api/informasi/mobile/list?limit=20
 Authorization: Bearer <token>
 ```
 
 **Features:**
+
 - Hanya menampilkan informasi dengan `is_active = true`
 - Filter berdasarkan `tanggal_mulai` dan `tanggal_selesai`
 - Filter berdasarkan `target_role` sesuai role user
 - Sorted by `priority DESC`, `created_at DESC`
 
 **Response:**
+
 ```json
 [
   {
@@ -168,40 +184,43 @@ Authorization: Bearer <token>
 ```
 
 #### 2. Get Informasi Detail
+
 ```http
 GET /api/informasi/mobile/{informasi_id}
 Authorization: Bearer <token>
 ```
 
 **Features:**
+
 - Check target role authorization
 - Hanya tampilkan jika `is_active = true`
 
 ## Installation & Setup
 
 ### 1. Run Migration (MySQL)
+
 ```bash
 # Windows PowerShell
-Get-Content "C:\Project\Backend_api-main\migrations\create_informasi_table.sql" | mysql -u root e-learn
+Get-Content "D:\REACT PROJEK KELOMPOK SEMESTERAN\Update Ihya\Backend_api\migrations\create_informasi_table.sql" | mysql -u root e-learn
 
 # Or using cmd
-mysql -u root e-learn < "C:\Project\Backend_api-main\migrations\create_informasi_table.sql"
+mysql -u root e-learn < "D:\REACT PROJEK KELOMPOK SEMESTERAN\Update Ihya\Backend_api\migrations\create_informasi_table.sql"
 ```
 
 ### 2. Verify Installation
+
 ```sql
 -- Check table
 SELECT * FROM informasi;
 
 -- Check indexes
-\di informasi*
-
--- Check enum type
-\dT+ target_role_enum
+SHOW INDEX FROM informasi;
 ```
 
 ### 3. Test Endpoints
+
 Use Postman or curl to test:
+
 ```bash
 # Create informasi (need admin token)
 curl -X POST http://localhost:8000/api/informasi/ \
@@ -222,6 +241,7 @@ curl -X GET http://localhost:8000/api/informasi/mobile/list \
 ## Usage Examples
 
 ### Create Informasi with Image
+
 ```python
 # 1. Upload image first
 POST /api/informasi/upload-gambar
@@ -243,24 +263,26 @@ POST /api/informasi/
 ```
 
 ### Schedule Future Informasi
+
 ```json
 {
   "judul": "Pendaftaran KRS",
   "deskripsi": "Pendaftaran KRS semester genap akan dibuka",
   "priority": 100,
-  "tanggal_mulai": "2025-01-20T00:00:00",  // Mulai tampil 20 Jan
-  "tanggal_selesai": "2025-01-31T23:59:59",  // Berhenti tampil 31 Jan
+  "tanggal_mulai": "2025-01-20T00:00:00", // Mulai tampil 20 Jan
+  "tanggal_selesai": "2025-01-31T23:59:59", // Berhenti tampil 31 Jan
   "target_role": "mahasiswa"
 }
 ```
 
 ### Target Specific Role
+
 ```json
 {
   "judul": "Rapat Dosen",
   "deskripsi": "Rapat evaluasi semester di ruang rapat",
   "priority": 80,
-  "target_role": "dosen"  // Hanya dosen yang lihat
+  "target_role": "dosen" // Hanya dosen yang lihat
 }
 ```
 
@@ -325,13 +347,13 @@ suspend fun getInformasiDetail(id: Int): Informasi? {
 ```javascript
 // 1. Fetch informasi list
 const fetchInformasi = async () => {
-  const token = await AsyncStorage.getItem('token');
+  const token = await AsyncStorage.getItem("token");
   const response = await fetch(
-    'http://localhost:8000/api/informasi/mobile/list?limit=20',
+    "http://localhost:8000/api/informasi/mobile/list?limit=20",
     {
       headers: {
-        'Authorization': `Bearer ${token}`
-      }
+        Authorization: `Bearer ${token}`,
+      },
     }
   );
   const data = await response.json();
@@ -349,34 +371,24 @@ const fetchInformasi = async () => {
       priority={item.priority}
     />
   )}
-  keyExtractor={item => item.id.toString()}
-/>
+  keyExtractor={(item) => item.id.toString()}
+/>;
 ```
 
 ## Troubleshooting
 
-### Issue: Enum type already exists
-```sql
--- Error: type "target_role_enum" already exists
--- Solution: Migration sudah handle dengan DO block
-
-DO $$ BEGIN
-    CREATE TYPE target_role_enum AS ENUM ('all', 'mahasiswa', 'dosen');
-EXCEPTION
-    WHEN duplicate_object THEN null;
-END $$;
-```
-
 ### Issue: Foreign key constraint fails
+
 ```sql
 -- Error: FK constraint "fk_informasi_created_by" fails
 -- Solution: Pastikan user dengan id yang digunakan ada di tabel user
 
 -- Check user exists
-SELECT id, username, role FROM "user" WHERE id = 1;
+SELECT id_user, username, role FROM users WHERE id_user = 1;
 ```
 
 ### Issue: Image upload fails
+
 ```
 Error: File size exceeds 5MB limit
 Solution: Compress image atau increase limit di routes
@@ -394,4 +406,6 @@ Solution: Compress image atau increase limit di routes
 - [ ] **Analytics** - Track views, clicks, engagement
 
 ## License
+
 Internal use only - E-Learning System
+````

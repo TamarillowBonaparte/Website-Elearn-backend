@@ -79,6 +79,7 @@ from app.routes import (
     kelas_mata_kuliah_route,
     face_registration_db_route,
     face_recognition_route,
+    gaze_detection_route,
     informasi_route,
     jadwal_kuliah_route,
     skor_materi_route
@@ -118,6 +119,7 @@ app.include_router(mahasiswa_route.router)
 app.include_router(dashboard_route.router)
 app.include_router(face_registration_db_route.router)
 app.include_router(face_recognition_route.router)
+app.include_router(gaze_detection_route.router)
 app.include_router(informasi_route.router)
 app.include_router(jadwal_kuliah_route.router)
 app.include_router(skor_materi_route.router)
@@ -129,7 +131,7 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 def read_root():
     return {
         "message": "E-Learning API is running",
-        "version": "3.0.0 - Kelas Mata Kuliah Junction Table",
+        "version": "3.2.0 - Complete Features (Eye Tracking, Informasi & Jadwal)",
         "endpoints": {
             "auth": "/auth",
             "users": "/users",
@@ -144,6 +146,7 @@ def read_root():
             "dashboard": "/dashboard",
             "face_registration": "/face-registration",
             "face_recognition": "/face",
+            "gaze_detection": "/gaze",
             "informasi": "/api/informasi",
             "skor_materi": "/skor-materi"
         }

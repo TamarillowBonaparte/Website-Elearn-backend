@@ -207,13 +207,11 @@ def get_presensi_detail(
     """
     
     # Auto-update status Belum Absen menjadi Alfa jika sudah melewati waktu_selesai
-    # KECUALI jika admin sudah edit manual (ditandai dengan keterangan tidak kosong)
     current_datetime = datetime.now()
     current_date = current_datetime.date()
     current_time = current_datetime.time()
     
     # Update status yang masih "Belum Absen" menjadi "Alfa" jika sudah lewat waktu
-    # DAN keterangan masih kosong (artinya belum di-edit manual oleh admin)
     presensi_list_check = db.query(Presensi).filter(
         and_(
             Presensi.id_kelas_mk == id_kelas_mk,
@@ -223,11 +221,7 @@ def get_presensi_detail(
         )
     ).all()
     
-    # Filter dan update: hanya yang keterangan-nya kosong
     for presensi in presensi_list_check:
-        # Skip jika ada keterangan (admin sudah edit)
-        if presensi.keterangan:
-            continue
         # Jika tanggal presensi sudah lewat ATAU tanggal sama tapi waktu sudah lewat waktu_selesai
         if presensi.tanggal < current_date or \
            (presensi.tanggal == current_date and presensi.waktu_selesai and current_time > presensi.waktu_selesai):
@@ -244,7 +238,6 @@ def get_presensi_detail(
             p.waktu_input,
             p.waktu_mulai,
             p.waktu_selesai,
-            p.keterangan,
             m.nim,
             m.nama
         FROM presensi p
@@ -287,8 +280,7 @@ def get_presensi_detail(
             status=result.status,
             waktu_input=result.waktu_input,
             waktu_mulai=waktu_mulai_str,
-            waktu_selesai=waktu_selesai_str,
-            keterangan=result.keterangan
+            waktu_selesai=waktu_selesai_str
         ))
     
     return response
@@ -516,13 +508,11 @@ def get_presensi_mahasiswa(
         )
     
     # Auto-update status Belum Absen menjadi Alfa jika sudah lewat waktu
-    # KECUALI jika admin sudah edit manual (ditandai dengan keterangan tidak kosong)
     current_datetime = datetime.now()
     current_date = current_datetime.date()
     current_time = current_datetime.time()
     
     # Update status yang masih "Belum Absen" menjadi "Alfa" jika sudah lewat waktu
-    # DAN keterangan masih kosong (artinya belum di-edit manual oleh admin)
     presensi_list_check = db.query(Presensi).filter(
         and_(
             Presensi.id_mahasiswa == id_mahasiswa,
@@ -530,11 +520,7 @@ def get_presensi_mahasiswa(
         )
     ).all()
     
-    # Filter dan update: hanya yang keterangan-nya kosong
     for presensi in presensi_list_check:
-        # Skip jika ada keterangan (admin sudah edit)
-        if presensi.keterangan:
-            continue
         # Jika tanggal presensi sudah lewat ATAU tanggal sama tapi waktu sudah lewat waktu_selesai
         if presensi.tanggal < current_date or \
            (presensi.tanggal == current_date and presensi.waktu_selesai and current_time > presensi.waktu_selesai):

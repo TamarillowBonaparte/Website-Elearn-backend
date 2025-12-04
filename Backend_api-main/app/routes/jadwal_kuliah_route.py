@@ -7,6 +7,7 @@ from app.models.kelas_mata_kuliah_model import KelasMatKuliah
 from app.models.mata_kuliah_model import MataKuliah
 from app.models.kelas_model import Kelas
 from app.models.dosen_model import Dosen
+from app.models.mahasiswa_model import Mahasiswa
 from app.schemas.jadwal_kuliah_schema import (
     JadwalKuliahCreate,
     JadwalKuliahUpdate,
@@ -95,6 +96,83 @@ def get_my_jadwal(
         .joinedload(KelasMatKuliah.kelas),
         joinedload(JadwalKuliah.kelas_mata_kuliah)
         .joinedload(KelasMatKuliah.dosen)
+    ).all()
+    
+    result = []
+    for jadwal in jadwal_list:
+        kmk = jadwal.kelas_mata_kuliah
+        result.append({
+            "id_jadwal": jadwal.id_jadwal,
+            "id_kelas_mk": jadwal.id_kelas_mk,
+            "hari": jadwal.hari,
+            "jam_mulai": jadwal.jam_mulai,
+            "jam_selesai": jadwal.jam_selesai,
+            "ruangan": jadwal.ruangan,
+            "created_at": jadwal.created_at,
+            "updated_at": jadwal.updated_at,
+            "kode_mk": kmk.kode_mk if kmk else None,
+            "nama_mk": kmk.mata_kuliah.nama_mk if kmk and kmk.mata_kuliah else None,
+            "nama_kelas": kmk.kelas.nama_kelas if kmk and kmk.kelas else None,
+            "nama_dosen": kmk.dosen.nama_dosen if kmk and kmk.dosen else None,
+            "prodi": kmk.kelas.prodi if kmk and kmk.kelas else None,
+            "tahun_ajaran": kmk.tahun_ajaran if kmk else None,
+            "semester_aktif": kmk.semester_aktif if kmk else None
+        })
+    
+    return result
+
+@router.get("/mahasiswa/me", response_model=List[JadwalKuliahResponse])
+def get_mahasiswa_jadwal(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get jadwal kuliah for logged in mahasiswa based on their kelas"""
+    user_role = current_user.get("role")
+    
+    # Only mahasiswa can access this endpoint
+    if user_role != "mahasiswa":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only mahasiswa can access this endpoint"
+        )
+    
+    # Get mahasiswa by user_id
+    mahasiswa = db.query(Mahasiswa).filter(Mahasiswa.user_id == current_user.get("user_id")).first()
+    if not mahasiswa:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Mahasiswa profile not found"
+        )
+    
+    if not mahasiswa.id_kelas:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Mahasiswa tidak memiliki kelas"
+        )
+    
+    # Get all active kelas_mata_kuliah for this kelas
+    kelas_mk_list = db.query(KelasMatKuliah).filter(
+        KelasMatKuliah.id_kelas == mahasiswa.id_kelas,
+        KelasMatKuliah.status == "Aktif"
+    ).all()
+    
+    if not kelas_mk_list:
+        return []
+    
+    # Get all jadwal for these kelas_mata_kuliah
+    kelas_mk_ids = [kmk.id_kelas_mk for kmk in kelas_mk_list]
+    jadwal_list = db.query(JadwalKuliah).filter(
+        JadwalKuliah.id_kelas_mk.in_(kelas_mk_ids)
+    ).options(
+        joinedload(JadwalKuliah.kelas_mata_kuliah)
+        .joinedload(KelasMatKuliah.mata_kuliah),
+        joinedload(JadwalKuliah.kelas_mata_kuliah)
+        .joinedload(KelasMatKuliah.kelas),
+        joinedload(JadwalKuliah.kelas_mata_kuliah)
+        .joinedload(KelasMatKuliah.dosen)
+    ).order_by(
+        JadwalKuliah.hari,
+        JadwalKuliah.jam_mulai
     ).all()
     
     result = []

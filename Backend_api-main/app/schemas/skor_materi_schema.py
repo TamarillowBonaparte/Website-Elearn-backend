@@ -18,7 +18,8 @@ class SkorMateriBase(BaseModel):
     tracking_mode: TrackingMode
 
 class SkorMateriCreate(SkorMateriBase):
-    pass
+    session_start: Optional[str | datetime] = None
+    session_end: Optional[str | datetime] = None
 
 class SkorMateriUpdate(BaseModel):
     waktu_belajar: Optional[int] = None

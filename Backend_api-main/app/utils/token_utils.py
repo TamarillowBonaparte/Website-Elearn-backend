@@ -59,7 +59,8 @@ def require_admin_or_super_admin(current_user: dict = Depends(get_current_user))
     Dependency to check if current user is admin or super_admin
     Raises 403 if not admin or super_admin
     """
-    if current_user.get("role") not in ["admin", "super_admin"]:
+    user_role = current_user.get("role")
+    if user_role not in ["admin", "super_admin"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Akses ditolak. Hanya Admin atau Super Admin yang dapat melakukan operasi ini."

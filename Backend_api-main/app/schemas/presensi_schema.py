@@ -32,7 +32,6 @@ class PresensiDetailResponse(BaseModel):
     waktu_input: Optional[datetime]
     waktu_mulai: Optional[str]
     waktu_selesai: Optional[str]
-    keterangan: Optional[str]
     
     class Config:
         from_attributes = True

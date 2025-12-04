@@ -308,7 +308,6 @@ async def get_informasi_mobile(
     Get active informasi untuk mobile app
     - Hanya yang is_active = True
     - Hanya yang dalam periode tampil (tanggal_mulai <= now <= tanggal_selesai)
-    - Filter berdasarkan target_role user
     - Sorted by priority (desc) then created_at (desc)
     """
     try:
@@ -329,18 +328,6 @@ async def get_informasi_mobile(
                 Informasi.tanggal_selesai >= now
             )
         )
-        
-        # Filter by target role
-        user_role = current_user.get("role")  # mahasiswa, dosen, admin, super_admin
-        
-        # Admin & super_admin bisa lihat semua
-        if user_role not in ['admin', 'super_admin']:
-            query = query.filter(
-                or_(
-                    Informasi.target_role == 'all',
-                    Informasi.target_role == user_role
-                )
-            )
         
         # Order by priority (desc) then created_at (desc)
         query = query.order_by(desc(Informasi.priority), desc(Informasi.created_at))
@@ -376,14 +363,5 @@ async def get_informasi_detail_mobile(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Informasi with ID {informasi_id} not found or not active"
         )
-    
-    # Check target role
-    user_role = current_user.get("role")
-    if user_role not in ['admin', 'super_admin']:
-        if informasi.target_role != 'all' and informasi.target_role != user_role:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You are not authorized to view this informasi"
-            )
     
     return informasi

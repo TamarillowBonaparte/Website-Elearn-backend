@@ -25,6 +25,10 @@ class MateriResponse(MateriBase):
     uploaded_by: Optional[int] = None
     nama_dosen: Optional[str] = None  # Nama dosen yang upload
     tanggal_upload: datetime
+    pdf_url: Optional[str] = None  # URL untuk akses PDF via static
+    pdf_file_url: Optional[str] = None  # URL untuk streaming PDF
+    pdf_view_url: Optional[str] = None  # URL untuk preview PDF
+    pdf_download_url: Optional[str] = None  # URL untuk download PDF
     
     class Config:
         from_attributes = True

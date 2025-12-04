@@ -264,7 +264,11 @@ def get_all_materi(
             "file_pdf": materi.file_pdf,
             "uploaded_by": materi.uploaded_by,
             "tanggal_upload": materi.tanggal_upload,
-            "nama_dosen": None
+            "nama_dosen": None,
+            "pdf_url": f"/uploads/materi/{materi.file_pdf}" if materi.file_pdf else None,
+            "pdf_file_url": f"/materi/file/{materi.id_materi}" if materi.file_pdf else None,
+            "pdf_view_url": f"/materi/view/{materi.id_materi}" if materi.file_pdf else None,
+            "pdf_download_url": f"/materi/download/{materi.id_materi}" if materi.file_pdf else None
         }
         
         # Fetch nama dosen if uploaded_by exists
@@ -293,6 +297,17 @@ async def create_materi(
     db: Session = Depends(get_db),
 ):
     """Tambah materi baru — shared per kode_mk + id_kelas, tracked by uploaded_by"""
+    print(f"\n🔍 DEBUG CREATE MATERI:")
+    print(f"   kode_mk: {kode_mk}")
+    print(f"   id_kelas: {id_kelas}")
+    print(f"   minggu: {minggu}")
+    print(f"   judul: {judul}")
+    print(f"   file_pdf: {file_pdf}")
+    if file_pdf:
+        print(f"   - filename: {file_pdf.filename}")
+        print(f"   - content_type: {file_pdf.content_type}")
+        print(f"   - size: {file_pdf.size if hasattr(file_pdf, 'size') else 'unknown'}")
+    
     try:
         # Validasi minggu
         if minggu < 1 or minggu > 16:
@@ -301,6 +316,7 @@ async def create_materi(
         # Handle file upload (jika ada)
         file_name = None
         if file_pdf:
+            print(f"   📁 Processing file upload...")
             if not file_pdf.filename.lower().endswith(".pdf"):
                 raise HTTPException(status_code=400, detail="File harus berformat PDF")
 
@@ -311,12 +327,21 @@ async def create_materi(
             # Buat nama file unik agar tidak bentrok
             safe_filename = f"{kode_mk}_kelas{id_kelas}_minggu{minggu}_{uuid.uuid4().hex}.pdf"
             file_path = UPLOAD_DIR / safe_filename
+            
+            print(f"   📍 Upload directory: {UPLOAD_DIR.absolute()}")
+            print(f"   📝 Safe filename: {safe_filename}")
+            print(f"   📂 Full path: {file_path.absolute()}")
 
             try:
                 with file_path.open("wb") as buffer:
                     shutil.copyfileobj(file_pdf.file, buffer)
                 file_name = safe_filename
+                print(f"   ✅ File saved successfully!")
+                print(f"   📊 File exists: {file_path.exists()}")
+                if file_path.exists():
+                    print(f"   📏 File size: {file_path.stat().st_size} bytes")
             except Exception as e:
+                print(f"   ❌ Error saving file: {e}")
                 raise HTTPException(status_code=500, detail=f"Gagal menyimpan file: {e}")
 
         # Simpan ke database
@@ -333,6 +358,10 @@ async def create_materi(
         db.add(new_materi)
         db.commit()
         db.refresh(new_materi)
+        
+        print(f"   ✅ Materi saved to database!")
+        print(f"   📝 ID: {new_materi.id_materi}")
+        print(f"   📄 file_pdf in DB: {new_materi.file_pdf}")
 
         return new_materi
         
@@ -477,5 +506,86 @@ def download_file_materi(id_materi: int, db: Session = Depends(get_db)):
         filename=f"{materi.judul}.pdf",
         headers={
             "Content-Disposition": f'attachment; filename="{materi.judul}.pdf"'
+        }
+    )
+
+
+# ===========================
+# GET PDF URL (untuk React Native)
+# ===========================
+@router.get("/pdf/{id_materi}")
+def get_pdf_url(id_materi: int, db: Session = Depends(get_db)):
+    """Get PDF file URL untuk React Native"""
+    materi = db.query(Materi).filter(Materi.id_materi == id_materi).first()
+    if not materi:
+        raise HTTPException(status_code=404, detail="Materi tidak ditemukan")
+
+    if not materi.file_pdf:
+        raise HTTPException(status_code=404, detail="File PDF tidak tersedia")
+
+    file_path = UPLOAD_DIR / materi.file_pdf
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="File PDF tidak ditemukan di server")
+
+    # Return full path URL untuk React Native
+    from urllib.parse import quote
+    encoded_filename = quote(materi.file_pdf)
+    
+    return {
+        "id_materi": materi.id_materi,
+        "judul": materi.judul,
+        "file_pdf": materi.file_pdf,
+        "pdf_url": f"/uploads/materi/{encoded_filename}",
+        "view_url": f"/materi/view/{id_materi}",
+        "download_url": f"/materi/download/{id_materi}"
+    }
+
+
+# ===========================
+# GET FILE PDF LANGSUNG (untuk streaming)
+# ===========================
+@router.get("/file/{id_materi}")
+def get_pdf_file(id_materi: int, db: Session = Depends(get_db)):
+    """Get PDF file langsung untuk streaming di React Native"""
+    materi = db.query(Materi).filter(Materi.id_materi == id_materi).first()
+    if not materi:
+        raise HTTPException(status_code=404, detail="Materi tidak ditemukan")
+
+    if not materi.file_pdf:
+        raise HTTPException(status_code=404, detail="File PDF tidak tersedia")
+
+    file_path = UPLOAD_DIR / materi.file_pdf
+    
+    # Debug logging
+    print(f"🔍 Debug PDF File:")
+    print(f"   ID Materi: {id_materi}")
+    print(f"   Judul: {materi.judul}")
+    print(f"   File PDF from DB: {materi.file_pdf}")
+    print(f"   UPLOAD_DIR: {UPLOAD_DIR}")
+    print(f"   Full path: {file_path}")
+    print(f"   File exists: {file_path.exists()}")
+    
+    if not file_path.exists():
+        # Try to list files in directory to help debug
+        import os
+        try:
+            files = os.listdir(UPLOAD_DIR)
+            print(f"   Files in upload dir: {files[:5]}")  # Show first 5 files
+        except Exception as e:
+            print(f"   Error listing directory: {e}")
+        
+        raise HTTPException(
+            status_code=404, 
+            detail=f"File PDF tidak ditemukan di server. Expected: {materi.file_pdf}"
+        )
+
+    # Return file dengan header yang cocok untuk React Native
+    return FileResponse(
+        path=file_path,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'inline; filename="{materi.judul}.pdf"',
+            "Cache-Control": "public, max-age=3600",
+            "Access-Control-Allow-Origin": "*"
         }
     )
