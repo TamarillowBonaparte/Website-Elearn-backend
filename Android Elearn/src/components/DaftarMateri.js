@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -11,21 +11,59 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { API_URL } from '../config/api';
 
-const DaftarMateri = ({ navigation }) => {
+const DaftarMateri = ({ navigation, route }) => {
   const [mahasiswaData, setMahasiswaData] = useState(null);
   const [materiList, setMateriList] = useState([]);
+  const [readMateriIds, setReadMateriIds] = useState(new Set());
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadMahasiswaData();
   }, []);
+
+  const fetchReadMateri = async (id_mahasiswa) => {
+    try {
+      console.log(`🔄 Fetching skor materi for mahasiswa ${id_mahasiswa}`);
+      const token = await AsyncStorage.getItem('access_token');
+      const response = await axios.get(`${API_URL}/skor-materi/mahasiswa/${id_mahasiswa}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Cache-Control': 'no-cache',
+        },
+      });
+
+      if (response.data && Array.isArray(response.data)) {
+        const ids = new Set(response.data.map((item) => item.id_materi));
+        console.log(`✅ Read materi IDs loaded: ${ids.size}`);
+        setReadMateriIds(ids);
+      } else {
+        console.warn('⚠️ Response skor materi is not an array:', response.data);
+        setReadMateriIds(new Set());
+      }
+    } catch (error) {
+      console.error('❌ Error fetching skor materi:', error);
+      setReadMateriIds(new Set());
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      if (mahasiswaData?.id_kelas) {
+        fetchMateriData(mahasiswaData.id_kelas);
+      }
+      if (mahasiswaData?.id_mahasiswa) {
+        fetchReadMateri(mahasiswaData.id_mahasiswa);
+      }
+    }, [mahasiswaData])
+  );
 
   const loadMahasiswaData = async () => {
     try {
@@ -35,6 +73,9 @@ const DaftarMateri = ({ navigation }) => {
         setMahasiswaData(parsedMahasiswa);
         if (parsedMahasiswa.id_kelas) {
           fetchMateriData(parsedMahasiswa.id_kelas);
+        }
+        if (parsedMahasiswa.id_mahasiswa) {
+          fetchReadMateri(parsedMahasiswa.id_mahasiswa);
         }
       }
     } catch (error) {
@@ -75,6 +116,9 @@ const DaftarMateri = ({ navigation }) => {
     setRefreshing(true);
     if (mahasiswaData && mahasiswaData.id_kelas) {
       fetchMateriData(mahasiswaData.id_kelas);
+      if (mahasiswaData.id_mahasiswa) {
+        fetchReadMateri(mahasiswaData.id_mahasiswa);
+      }
     } else {
       setRefreshing(false);
     }
@@ -89,6 +133,7 @@ const DaftarMateri = ({ navigation }) => {
   };
 
   const handleMateriPress = (materi) => {
+    const alreadyRead = readMateriIds.has(materi.id_materi);
     if (materi.file_pdf) {
       navigation.navigate('MateriEyeTracking', {
         materi: {
@@ -97,24 +142,126 @@ const DaftarMateri = ({ navigation }) => {
           title: materi.judul,
           subtitle: `${materi.kode_mk} - Minggu ${materi.minggu}`,
         },
-        id_mahasiswa: route.params?.id_mahasiswa,
+        id_mahasiswa: mahasiswaData?.id_mahasiswa,
         serverUrl: API_URL,
         useRemoteServer: true,
+        skipScore: alreadyRead,
       });
     } else {
       Alert.alert('Info', 'File PDF tidak tersedia untuk materi ini');
     }
   };
 
-  // Group materi by mata kuliah
-  const groupedMateri = materiList.reduce((acc, materi) => {
-    const key = `${materi.kode_mk} - ${materi.nama_mk || materi.kode_mk}`;
-    if (!acc[key]) {
-      acc[key] = [];
-    }
-    acc[key].push(materi);
-    return acc;
-  }, {});
+  const groupedReadMateri = materiList
+    .filter((m) => readMateriIds.has(m.id_materi))
+    .reduce((acc, materi) => {
+      const key = `${materi.kode_mk} - ${materi.nama_mk || materi.kode_mk}`;
+      if (!acc[key]) {
+        acc[key] = [];
+      }
+      acc[key].push(materi);
+      return acc;
+    }, {});
+
+  const totalUnread = materiList.filter((m) => !readMateriIds.has(m.id_materi)).length;
+  const totalRead = materiList.length - totalUnread;
+
+  const renderMateriGroups = (groups, isReadSection = false) => (
+    Object.keys(groups).map((matkul) => (
+      <View key={`${matkul}-${isReadSection ? 'read' : 'unread'}`} style={styles.matkulSection}>
+        <View style={styles.matkulHeader}>
+          <Ionicons name="book" size={20} color="#1E40AF" />
+          <Text style={styles.matkulTitle}>{matkul}</Text>
+          {isReadSection && (
+            <View style={styles.readBadge}>
+              <Text style={styles.readBadgeText}>Sudah dibaca</Text>
+            </View>
+          )}
+        </View>
+
+        {groups[matkul]
+          .sort((a, b) => a.minggu - b.minggu)
+          .map((materi, index) => (
+            <TouchableOpacity
+              key={materi.id_materi ?? `${matkul}-${index}`}
+              style={styles.materiCard}
+              onPress={() => handleMateriPress(materi)}
+            >
+              <View style={styles.materiMain}>
+                <View style={styles.materiIconContainer}>
+                  <Ionicons name="document-text" size={24} color="#0C4A6E" />
+                </View>
+
+                <View style={styles.materiContent}>
+                  <View style={styles.materiHeader}>
+                    <Text style={styles.materiTitle} numberOfLines={2}>
+                      {materi.judul}
+                    </Text>
+                    <View style={styles.mingguBadge}>
+                      <Text style={styles.mingguText}>Minggu {materi.minggu}</Text>
+                    </View>
+                  </View>
+
+                  {materi.deskripsi && (
+                    <Text style={styles.materiDescription} numberOfLines={2}>
+                      {materi.deskripsi}
+                    </Text>
+                  )}
+
+                  <View style={styles.materiFooter}>
+                    <View style={styles.materiTags}>
+                      {materi.nama_dosen && (
+                        <View style={styles.dosenTag}>
+                          <Ionicons name="person" size={12} color="#1E40AF" />
+                          <Text style={styles.dosenText} numberOfLines={1}>
+                            {materi.nama_dosen}
+                          </Text>
+                        </View>
+                      )}
+
+                      {materi.file_pdf && (
+                        <View style={styles.pdfTag}>
+                          <Ionicons name="document" size={12} color="#1E40AF" />
+                          <Text style={styles.pdfText}>PDF</Text>
+                        </View>
+                      )}
+
+                      <View style={isReadSection ? styles.readTag : styles.unreadTag}>
+                        <Text style={isReadSection ? styles.readTagText : styles.unreadTagText}>
+                          {isReadSection ? 'Sudah dibaca' : 'Belum dibaca'}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <Text style={styles.dateText}>
+                      {formatTanggalUpload(materi.tanggal_upload)}
+                    </Text>
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.arrowButton}
+                  onPress={() => handleMateriPress(materi)}
+                >
+                  <Ionicons name="chevron-forward" size={20} color="#1E40AF" />
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          ))}
+      </View>
+    ))
+  );
+
+  const groupedUnreadMateri = materiList
+    .filter((m) => !readMateriIds.has(m.id_materi))
+    .reduce((acc, materi) => {
+      const key = `${materi.kode_mk} - ${materi.nama_mk || materi.kode_mk}`;
+      if (!acc[key]) {
+        acc[key] = [];
+      }
+      acc[key].push(materi);
+      return acc;
+    }, {});
 
   return (
     <SafeAreaView style={styles.container}>
@@ -137,7 +284,7 @@ const DaftarMateri = ({ navigation }) => {
           <View style={styles.headerTextContainer}>
             <Text style={styles.headerTitle}>Daftar Materi</Text>
             <Text style={styles.headerSubtitle}>
-              {materiList.length} Materi Tersedia
+              {totalUnread} belum dibaca • {totalRead} selesai
             </Text>
           </View>
         </View>
@@ -157,87 +304,26 @@ const DaftarMateri = ({ navigation }) => {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
         >
-          {Object.keys(groupedMateri).length > 0 ? (
-            Object.keys(groupedMateri).map((matkul) => (
-              <View key={matkul} style={styles.matkulSection}>
-                <View style={styles.matkulHeader}>
-                  <Ionicons name="book" size={20} color="#1E40AF" />
-                  <Text style={styles.matkulTitle}>{matkul}</Text>
-                </View>
-
-                {groupedMateri[matkul]
-                  .sort((a, b) => a.minggu - b.minggu)
-                  .map((materi, index) => (
-                    <TouchableOpacity
-                      key={materi.id_materi ?? index}
-                      style={styles.materiCard}
-                      onPress={() => handleMateriPress(materi)}
-                    >
-                      <View style={styles.materiMain}>
-                        <View style={styles.materiIconContainer}>
-                          <Ionicons name="document-text" size={24} color="#0C4A6E" />
-                        </View>
-
-                        <View style={styles.materiContent}>
-                          <View style={styles.materiHeader}>
-                            <Text style={styles.materiTitle} numberOfLines={2}>
-                              {materi.judul}
-                            </Text>
-                            <View style={styles.mingguBadge}>
-                              <Text style={styles.mingguText}>Minggu {materi.minggu}</Text>
-                            </View>
-                          </View>
-
-                          {materi.deskripsi && (
-                            <Text style={styles.materiDescription} numberOfLines={2}>
-                              {materi.deskripsi}
-                            </Text>
-                          )}
-
-                          <View style={styles.materiFooter}>
-                            <View style={styles.materiTags}>
-                              {materi.nama_dosen && (
-                                <View style={styles.dosenTag}>
-                                  <Ionicons name="person" size={12} color="#1E40AF" />
-                                  <Text style={styles.dosenText} numberOfLines={1}>
-                                    {materi.nama_dosen}
-                                  </Text>
-                                </View>
-                              )}
-
-                              {materi.file_pdf && (
-                                <View style={styles.pdfTag}>
-                                  <Ionicons name="document" size={12} color="#1E40AF" />
-                                  <Text style={styles.pdfText}>PDF</Text>
-                                </View>
-                              )}
-                            </View>
-
-                            <Text style={styles.dateText}>
-                              {formatTanggalUpload(materi.tanggal_upload)}
-                            </Text>
-                          </View>
-                        </View>
-
-                        <TouchableOpacity
-                          style={styles.arrowButton}
-                          onPress={() => handleMateriPress(materi)}
-                        >
-                          <Ionicons name="chevron-forward" size={20} color="#1E40AF" />
-                        </TouchableOpacity>
-                      </View>
-                    </TouchableOpacity>
-                  ))}
-              </View>
-            ))
+          {Object.keys(groupedUnreadMateri).length > 0 ? (
+            <>
+              <Text style={styles.sectionLabel}>Belum Dibaca</Text>
+              {renderMateriGroups(groupedUnreadMateri, false)}
+            </>
           ) : (
             <View style={styles.emptyContainer}>
               <Ionicons name="folder-open-outline" size={64} color="#CBD5E1" />
-              <Text style={styles.emptyTitle}>Belum Ada Materi</Text>
+              <Text style={styles.emptyTitle}>Tidak ada materi baru</Text>
               <Text style={styles.emptyText}>
-                Materi akan muncul di sini setelah dosen mengunggah
+                Semua materi di kelas Anda sudah dibaca
               </Text>
             </View>
+          )}
+
+          {Object.keys(groupedReadMateri).length > 0 && (
+            <>
+              <Text style={[styles.sectionLabel, { marginTop: 12 }]}>Sudah Dibaca</Text>
+              {renderMateriGroups(groupedReadMateri, true)}
+            </>
           )}
         </ScrollView>
       )}
@@ -312,6 +398,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 14,
     paddingHorizontal: 4,
+  },
+  readBadge: {
+    marginLeft: 8,
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  readBadgeText: {
+    fontSize: 11,
+    color: '#15803D',
+    fontWeight: '700',
   },
   matkulTitle: {
     fontSize: 16,
@@ -422,6 +520,28 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1E40AF',
   },
+  readTag: {
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  readTagText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#15803D',
+  },
+  unreadTag: {
+    backgroundColor: '#FFE4E6',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  unreadTagText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#BE123C',
+  },
   dateText: {
     fontSize: 11,
     color: '#94A3B8',
@@ -454,6 +574,13 @@ const styles = StyleSheet.create({
     color: '#64748B',
     textAlign: 'center',
     paddingHorizontal: 40,
+  },
+  sectionLabel: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#1E3A8A',
+    marginBottom: 8,
+    marginLeft: 4,
   },
 });
 

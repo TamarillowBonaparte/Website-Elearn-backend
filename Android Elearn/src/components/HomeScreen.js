@@ -36,6 +36,7 @@ const HomeScreen = ({
     const [mahasiswaData, setMahasiswaData] = useState(null);
     const [presensiList, setPresensiList] = useState([]);
     const [materiList, setMateriList] = useState([]);
+    const [readMateriIds, setReadMateriIds] = useState(new Set());
     const [refreshing, setRefreshing] = useState(false);
 
     useEffect(() => {
@@ -43,10 +44,36 @@ const HomeScreen = ({
       logAllAsyncStorageData();
     }, []);
 
+    const fetchReadMateri = async (id_mahasiswa) => {
+      try {
+        console.log(`🔄 Fetching skor materi for mahasiswa ${id_mahasiswa}`);
+        const token = await AsyncStorage.getItem('access_token');
+        const response = await axios.get(`${API_URL}/skor-materi/mahasiswa/${id_mahasiswa}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Cache-Control': 'no-cache',
+          },
+        });
+
+        if (response.data && Array.isArray(response.data)) {
+          const ids = new Set(response.data.map((item) => item.id_materi));
+          console.log(`✅ Read materi IDs loaded: ${ids.size}`);
+          setReadMateriIds(ids);
+        } else {
+          console.warn('⚠️ Response skor materi is not an array:', response.data);
+          setReadMateriIds(new Set());
+        }
+      } catch (error) {
+        console.error('❌ Error fetching skor materi:', error);
+        setReadMateriIds(new Set());
+      }
+    };
+
     useFocusEffect(
       useCallback(() => {
         if (mahasiswaData) {
           console.log('📱 HomeScreen focused - fetching fresh data...');
+          fetchReadMateri(mahasiswaData.id_mahasiswa);
           fetchPresensiData(mahasiswaData.id_mahasiswa);
           fetchMateriData(mahasiswaData.id_kelas);
         }
@@ -72,6 +99,7 @@ const HomeScreen = ({
           setMahasiswaData(parsedMahasiswa);
           console.log('📋 Mahasiswa data loaded:', parsedMahasiswa.id_mahasiswa, parsedMahasiswa.nim);
           if (parsedMahasiswa.id_mahasiswa) {
+            fetchReadMateri(parsedMahasiswa.id_mahasiswa);
             fetchPresensiData(parsedMahasiswa.id_mahasiswa);
             if (parsedMahasiswa.id_kelas) {
               fetchMateriData(parsedMahasiswa.id_kelas);
@@ -137,10 +165,8 @@ const HomeScreen = ({
         });
 
         if (response.data && Array.isArray(response.data)) {
-          // Ambil hanya 2 materi terbaru untuk preview di home
-          const recentMateri = response.data.slice(0, 2);
-          console.log(`✅ Fetched materi: ${recentMateri.length} items`);
-          setMateriList(recentMateri);
+          console.log(`✅ Fetched materi: ${response.data.length} items`);
+          setMateriList(response.data);
         } else {
           console.warn('⚠️ Response data is not an array:', response.data);
           setMateriList([]);
@@ -155,6 +181,7 @@ const HomeScreen = ({
     const onRefresh = () => {
       setRefreshing(true);
       if (mahasiswaData) {
+      fetchReadMateri(mahasiswaData.id_mahasiswa);
         fetchPresensiData(mahasiswaData.id_mahasiswa);
         if (mahasiswaData.id_kelas) {
           fetchMateriData(mahasiswaData.id_kelas);
@@ -290,11 +317,15 @@ const HomeScreen = ({
           id_mahasiswa: mahasiswaData?.id_mahasiswa,
           serverUrl: API_URL,
           useRemoteServer: true,
+          skipScore: false,
         });
       } else {
         Alert.alert('Info', 'File PDF tidak tersedia untuk materi ini');
       }
     };
+
+    const unreadMateri = materiList.filter((materi) => !readMateriIds.has(materi.id_materi));
+    const materiPreview = unreadMateri.slice(0, 2);
 
     return (
       <SafeAreaView style={styles.container}>
@@ -498,8 +529,8 @@ const HomeScreen = ({
               </TouchableOpacity>
             </View>
 
-            {materiList.length > 0 ? (
-              materiList.map((materi, index) => (
+            {materiPreview.length > 0 ? (
+              materiPreview.map((materi, index) => (
                 <TouchableOpacity
                   key={materi.id_materi || index}
                   style={styles.materiCard}
@@ -561,8 +592,8 @@ const HomeScreen = ({
                     </View>
 
                     <View style={styles.materiInfo}>
-                      <Text style={styles.materiTitle}>Belum Ada Materi</Text>
-                      <Text style={styles.materiSubtitle}>Materi akan muncul di sini setelah dosen mengunggah</Text>
+                      <Text style={styles.materiTitle}>Semua Materi Sudah Dibaca</Text>
+                      <Text style={styles.materiSubtitle}>Materi yang sudah dibaca bisa dilihat lewat menu Materi</Text>
                     </View>
                   </View>
                 </View>

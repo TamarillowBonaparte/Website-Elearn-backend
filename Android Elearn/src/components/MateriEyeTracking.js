@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
   Linking,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Camera, useCameraDevice } from 'react-native-vision-camera';
 import Pdf from 'react-native-pdf';
 import { API_URL } from '../config/api';
@@ -21,6 +22,7 @@ const { width, height } = Dimensions.get('window');
 
 export default function MateriEyeTracking({ route, navigation }) {
   const { materi } = route.params;
+  const skipScore = route.params?.skipScore ?? false;
   // Menggunakan API_URL dari config/api.js
   const PYTHON_SERVER_URL = route.params?.serverUrl || API_URL;
   const useRemoteServer = route.params?.useRemoteServer ?? true; // jika true, selalu polling server untuk gaze
@@ -49,8 +51,9 @@ export default function MateriEyeTracking({ route, navigation }) {
   const [currentFocus, setCurrentFocus] = useState(true);
   const [isSimulatingEyeTracking, setIsSimulatingEyeTracking] = useState(false);
   const [serverConnected, setServerConnected] = useState(null); // null = unknown, true = connected, false = disconnected
+  const [studentId, setStudentId] = useState(null);
 
-  const MINIMUM_READING_TIME = 60; // 1 menit untuk testing
+  const MINIMUM_READING_TIME = skipScore ? 0 : 60; // Lewatkan batas jika materi sudah pernah dibaca
 
   const device = useCameraDevice('front');
   const cameraRef = useRef(null);
@@ -192,7 +195,7 @@ export default function MateriEyeTracking({ route, navigation }) {
   // ========== CAMERA & TRACKING FUNCTIONS ==========
 
   const handleBackPress = useCallback(() => {
-    if (!canFinish) {
+    if (!skipScore && !canFinish) {
       const remainingTime = MINIMUM_READING_TIME - timeElapsed;
       Alert.alert(
         'Belum Selesai',
@@ -249,11 +252,18 @@ export default function MateriEyeTracking({ route, navigation }) {
       eyeMovements: trackingData.eyeMovements,
     };
 
+    if (skipScore) {
+      console.log('[SaveDB] ⏭️ Skip simpan skor karena materi sudah dibaca');
+      navigation.goBack();
+      return true;
+    }
+
     console.log('Saving tracking data:', finalData);
 
     // Simpan ke database (hanya field yang ada di database)
+    const resolvedStudentId = studentId || route.params?.id_mahasiswa;
     const dbPayload = {
-      id_mahasiswa: route.params?.id_mahasiswa ?? 1,
+      id_mahasiswa: resolvedStudentId,
       id_materi: materi?.id_materi ?? materi?.id ?? 1,
       waktu_belajar: trackingData.totalTime,
       waktu_fokus: trackingData.focusTime,
@@ -288,9 +298,20 @@ export default function MateriEyeTracking({ route, navigation }) {
         },
       ],
     );
-  }, [canFinish, timeElapsed, trackingData, currentPage, totalPages, cameraPermission, materi, route.params, navigation]);
+  }, [canFinish, timeElapsed, trackingData, currentPage, totalPages, cameraPermission, materi, route.params, navigation, skipScore, studentId]);
 
   useEffect(() => {
+    AsyncStorage.getItem('mahasiswa')
+      .then((val) => {
+        if (val) {
+          const parsed = JSON.parse(val);
+          if (parsed?.id_mahasiswa) {
+            setStudentId(parsed.id_mahasiswa);
+          }
+        }
+      })
+      .catch((err) => console.warn('⚠️ gagal load mahasiswa dari storage', err));
+
     // Prevent multiple initialization
     if (initialized.current) {
       console.log('[EyeTracking] ⚠️ Already initialized, skipping...');
@@ -301,6 +322,15 @@ export default function MateriEyeTracking({ route, navigation }) {
     console.log('[EyeTracking] 🎯 Initializing component (first time only)');
     
     const timer = setTimeout(() => {
+      if (skipScore) {
+        console.log('[EyeTracking] ⏭️ Skip permission/eye tracking for already-read materi');
+        setIsLoadingPermission(false);
+        setCameraPermission(false);
+        setIsSimulatingEyeTracking(false);
+        setServerConnected(true);
+        setCanFinish(true);
+        return;
+      }
       initializePermissions();
     }, 100);
 
@@ -436,17 +466,22 @@ export default function MateriEyeTracking({ route, navigation }) {
   };
 
   const startTracking = () => {
+    if (skipScore) {
+      console.log('[EyeTracking] ⏭️ Tracking skipped (already read)');
+      return;
+    }
     console.log('[EyeTracking] 🎬 Starting tracking...');
     console.log('[EyeTracking] useRemoteServer:', useRemoteServer);
     console.log('[EyeTracking] cameraPermission:', cameraPermission);
     console.log('[EyeTracking] isSimulatingEyeTracking:', isSimulatingEyeTracking);
+    console.log('[EyeTracking] skipScore:', skipScore);
     
     setIsTracking(true);
     startTime.current = Date.now();
     lastFocusTime.current = Date.now();
     pageStartTime.current = Date.now();
     setTimeElapsed(0);
-    setCanFinish(false);
+    setCanFinish(skipScore);
     
     // Clear existing intervals first
     if (remoteInterval.current) {
@@ -751,6 +786,69 @@ export default function MateriEyeTracking({ route, navigation }) {
 
   // ========== RENDER ==========
 
+  if (skipScore) {
+    return (
+      <SafeAreaView style={styles.container}> 
+        <StatusBar barStyle="light-content" backgroundColor="#4F46E5" />
+        <View style={styles.headerSimple}>
+          <View>
+            <Text style={styles.materiTitle}>{materi.title}</Text>
+            <Text style={styles.materiSubtitle}>
+              {materi.subtitle || 'Mode baca ulang (tracking dimatikan)'}
+            </Text>
+            {/* <View style={styles.infoChip}>
+              <Text style={styles.infoChipText}>Tracking, kamera, dan timer dinonaktifkan</Text>
+            </View> */}
+          </View>
+          <TouchableOpacity style={styles.closeButton} onPress={() => navigation.goBack()}>
+            <Text style={styles.closeButtonText}>Tutup</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={[styles.pdfContainer, { paddingTop: 0 }]}> 
+          {isLoadingPDF && (
+            <View style={styles.pdfLoading}>
+              <ActivityIndicator size="large" color="#4F46E5" />
+              <Text style={styles.pdfLoadingText}>Memuat PDF...</Text>
+            </View>
+          )}
+
+          {pdfError && (
+            <View style={styles.pdfError}>
+              <Text style={styles.pdfErrorText}>❌ Gagal Memuat PDF</Text>
+              <Text style={styles.pdfErrorDetail}>{pdfError}</Text>
+              <TouchableOpacity
+                style={styles.retryButton}
+                onPress={() => {
+                  setPdfError(null);
+                  setIsLoadingPDF(true);
+                }}
+              >
+                <Text style={styles.retryButtonText}>Coba Lagi</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          <Pdf
+            ref={pdfRef}
+            source={getPdfSource()}
+            trustAllCerts={false}
+            onLoadComplete={handlePdfLoadComplete}
+            onPageChanged={handlePageChanged}
+            onError={handlePdfError}
+            onPressLink={handlePdfLinkPress}
+            style={styles.pdf}
+            enablePaging={true}
+            horizontal={false}
+            spacing={10}
+            enableAntialiasing={true}
+            enableAnnotationRendering={true}
+          />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   if (isLoadingPermission) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
@@ -1000,6 +1098,18 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 25,
     borderBottomRightRadius: 25,
   },
+  headerSimple: {
+    backgroundColor: '#4F46E5',
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 16,
+    borderBottomLeftRadius: 22,
+    borderBottomRightRadius: 22,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
   headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1086,6 +1196,18 @@ const styles = StyleSheet.create({
     color: '#E0E7FF',
     fontSize: 14,
   },
+  infoChip: {
+    marginTop: 8,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+  },
+  infoChipText: {
+    color: '#E0E7FF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
   serverStatusContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1160,6 +1282,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     textAlign: 'center',
+  },
+  closeButton: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 14,
+  },
+  closeButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 13,
   },
   pdfContainer: {
     flex: 1,

@@ -35,12 +35,12 @@ const BottomNavigation = () => {
         active={route.name === 'Home'}
         onPress={() => navigation.navigate('Home')}
       />
-      <NavItem
+      {/* <NavItem
         icon="book"
         label="Materi"
         active={route.name === 'Courses'}
         onPress={() => navigation.navigate('Courses')}
-      />
+      /> */}
       <NavItem
         icon="checkmark-circle"
         label="Presensi"
