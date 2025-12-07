@@ -12,7 +12,7 @@ Features of this Android app:
 # Screenshots Aplication
 (ganbar)
 
-# Hall Of Frame Creator
+# Hall Of Frame
 <img width="4778" height="4201" alt="Group 2 (1)-min" src="https://github.com/user-attachments/assets/1b546fcc-3688-4f33-8149-82617eaa1a36" />
 
 
