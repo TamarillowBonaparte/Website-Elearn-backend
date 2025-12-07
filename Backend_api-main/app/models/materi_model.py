@@ -41,6 +41,7 @@ class Materi(Base):
     mata_kuliah = relationship("MataKuliah", back_populates="materi_list")
     kelas = relationship("Kelas", foreign_keys=[id_kelas])
     dosen = relationship("Dosen", foreign_keys=[uploaded_by])
+    skor_materi = relationship("SkorMateri", back_populates="materi", cascade="all, delete-orphan")
     
     # Index untuk performa query
     __table_args__ = (

@@ -80,11 +80,12 @@
 #         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
 # app/routes/mata_kuliah_route.py
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from app.core.database import get_db
 from app.models.mata_kuliah_model import MataKuliah
+from app.utils.token_utils import get_current_user, require_super_admin
 from typing import Optional
 from pydantic import BaseModel, Field
 
@@ -92,18 +93,18 @@ router = APIRouter(prefix="/mata-kuliah", tags=["Mata Kuliah"])
 
 
 class MataKuliahCreate(BaseModel):
-    kode_mk: str = Field(..., min_length=2)
-    nama_mk: str = Field(..., min_length=3)
-    sks: Optional[int] = None
-    id_dosen: Optional[int] = None
-    id_kelas: Optional[int] = None
+    kode_mk: str = Field(..., min_length=2, max_length=20, description="Kode mata kuliah")
+    nama_mk: str = Field(..., min_length=3, max_length=200, description="Nama mata kuliah")
+    sks: Optional[int] = Field(None, ge=1, le=6, description="Jumlah SKS (1-6)")
+    semester: Optional[int] = Field(None, ge=1, le=8, description="Semester (1-8)")
+    deskripsi: Optional[str] = Field(None, max_length=1000, description="Deskripsi mata kuliah")
 
 
 class MataKuliahUpdate(BaseModel):
-    nama_mk: Optional[str] = None
-    sks: Optional[int] = None
-    id_dosen: Optional[int] = None
-    id_kelas: Optional[int] = None
+    nama_mk: Optional[str] = Field(None, min_length=3, max_length=200)
+    sks: Optional[int] = Field(None, ge=1, le=6)
+    semester: Optional[int] = Field(None, ge=1, le=8)
+    deskripsi: Optional[str] = Field(None, max_length=1000)
 
 @router.get("/")
 def get_all_mata_kuliah(db: Session = Depends(get_db)):
@@ -225,9 +226,13 @@ def get_mata_kuliah_by_kode(kode_mk: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
 
-@router.post("/")
-def create_mata_kuliah(payload: MataKuliahCreate, db: Session = Depends(get_db)):
-    """Tambah mata kuliah baru"""
+@router.post("/", status_code=status.HTTP_201_CREATED)
+def create_mata_kuliah(
+    payload: MataKuliahCreate, 
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(require_super_admin)
+):
+    """Tambah mata kuliah baru (Super Admin only)"""
     try:
         existing = db.query(MataKuliah).filter(MataKuliah.kode_mk == payload.kode_mk).first()
         if existing:
@@ -237,29 +242,36 @@ def create_mata_kuliah(payload: MataKuliahCreate, db: Session = Depends(get_db))
             kode_mk=payload.kode_mk,
             nama_mk=payload.nama_mk,
             sks=payload.sks,
-            id_dosen=payload.id_dosen,
-            id_kelas=payload.id_kelas
+            semester=payload.semester,
+            deskripsi=payload.deskripsi
         )
         db.add(new_mk)
         db.commit()
         db.refresh(new_mk)
         return {
+            "message": "Mata kuliah berhasil ditambahkan",
             "kode_mk": new_mk.kode_mk,
             "nama_mk": new_mk.nama_mk,
             "sks": new_mk.sks,
-            "id_dosen": new_mk.id_dosen,
-            "id_kelas": new_mk.id_kelas
+            "semester": new_mk.semester,
+            "deskripsi": new_mk.deskripsi
         }
     except HTTPException:
         raise
     except Exception as e:
+        db.rollback()
         print(f"Error create_mata_kuliah: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Gagal menambah mata kuliah: {str(e)}")
 
 
 @router.put("/{kode_mk}")
-def update_mata_kuliah(kode_mk: str, payload: MataKuliahUpdate, db: Session = Depends(get_db)):
-    """Edit data mata kuliah"""
+def update_mata_kuliah(
+    kode_mk: str, 
+    payload: MataKuliahUpdate, 
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(require_super_admin)
+):
+    """Edit data mata kuliah (Super Admin only)"""
     try:
         mk = db.query(MataKuliah).filter(MataKuliah.kode_mk == kode_mk).first()
         if not mk:
@@ -269,30 +281,36 @@ def update_mata_kuliah(kode_mk: str, payload: MataKuliahUpdate, db: Session = De
             mk.nama_mk = payload.nama_mk
         if payload.sks is not None:
             mk.sks = payload.sks
-        if payload.id_dosen is not None:
-            mk.id_dosen = payload.id_dosen
-        if payload.id_kelas is not None:
-            mk.id_kelas = payload.id_kelas
+        if payload.semester is not None:
+            mk.semester = payload.semester
+        if payload.deskripsi is not None:
+            mk.deskripsi = payload.deskripsi
         
         db.commit()
         db.refresh(mk)
         return {
+            "message": "Mata kuliah berhasil diupdate",
             "kode_mk": mk.kode_mk,
             "nama_mk": mk.nama_mk,
             "sks": mk.sks,
-            "id_dosen": mk.id_dosen,
-            "id_kelas": mk.id_kelas
+            "semester": mk.semester,
+            "deskripsi": mk.deskripsi
         }
     except HTTPException:
         raise
     except Exception as e:
+        db.rollback()
         print(f"Error update_mata_kuliah: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Gagal mengedit mata kuliah: {str(e)}")
 
 
-@router.delete("/{kode_mk}")
-def delete_mata_kuliah(kode_mk: str, db: Session = Depends(get_db)):
-    """Hapus mata kuliah"""
+@router.delete("/{kode_mk}", status_code=status.HTTP_200_OK)
+def delete_mata_kuliah(
+    kode_mk: str, 
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(require_super_admin)
+):
+    """Hapus mata kuliah (Super Admin only)"""
     try:
         mk = db.query(MataKuliah).filter(MataKuliah.kode_mk == kode_mk).first()
         if not mk:
@@ -303,5 +321,6 @@ def delete_mata_kuliah(kode_mk: str, db: Session = Depends(get_db)):
     except HTTPException:
         raise
     except Exception as e:
+        db.rollback()
         print(f"Error delete_mata_kuliah: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Gagal menghapus mata kuliah: {str(e)}")

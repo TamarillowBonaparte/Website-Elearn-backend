@@ -13,6 +13,12 @@ import ViewMinggu from "./pages/minggu"; // ✅ TAMBAHKAN INI
 import MingguMateri from "./pages/mingguMateri";
 import UserPage from "./pages/user";
 import KelolaDosen from "./pages/kelolaDosen";
+import DetailProfilDosen from "./pages/detailProfilDosen";
+import ProfilSaya from "./pages/profilSaya";
+import Informasi from "./pages/informasi";
+import InformasiForm from "./pages/informasiForm";
+import KelolaMataKuliah from "./pages/kelolaMataKuliah";
+import KelolaKelas from "./pages/kelolaKelas";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 export default function App() {
@@ -27,7 +33,14 @@ export default function App() {
     { path: "/materi/kelas-mk/:id_kelas_mk", element: <DetailMateri /> },
     { path: "/materi/:id_kelas_mk/minggu/view", element: <ViewMinggu /> },
     { path: "/materi/:id_kelas_mk/minggu/:minggu", element: <MingguMateri /> },
+    { path: "/informasi", element: <Informasi /> },
+    { path: "/informasi/create", element: <InformasiForm /> },
+    { path: "/informasi/edit/:id", element: <InformasiForm /> },
+    { path: "/kelola-mata-kuliah", element: <KelolaMataKuliah /> },
+    { path: "/kelola-kelas", element: <KelolaKelas /> },
     { path: "/kelola-dosen", element: <KelolaDosen /> },
+    { path: "/detail-profil-dosen/:id_dosen", element: <DetailProfilDosen /> },
+    { path: "/profil-saya", element: <ProfilSaya /> },
     { path: "/user", element: <UserPage /> },
   ];
 

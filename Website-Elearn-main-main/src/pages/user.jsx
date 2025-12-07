@@ -11,6 +11,7 @@ import {
   Shield,
   BookOpen,
   Clock,
+  AlertCircle,
 } from "lucide-react";
 
 export default function UserPage() {
@@ -23,6 +24,9 @@ export default function UserPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [loggedUser, setLoggedUser] = useState(null);
   const [showTokenWarning, setShowTokenWarning] = useState(false);
+  const [notification, setNotification] = useState({ show: false, type: '', message: '' });
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [currentUser, setCurrentUser] = useState({
     id_user: null,
     nama: "",
@@ -128,7 +132,7 @@ export default function UserPage() {
       setUsers(transformedUsers);
     } catch (error) {
       console.error("Error fetching users:", error);
-      alert("Gagal memuat data pengguna: " + error.message);
+      showNotification('error', "Gagal memuat data pengguna: " + error.message);
     } finally {
       setIsLoading(false);
     }
@@ -141,6 +145,13 @@ export default function UserPage() {
     } catch (error) {
       console.error("Error fetching kelas:", error);
     }
+  };
+
+  const showNotification = (type, message) => {
+    setNotification({ show: true, type, message });
+    setTimeout(() => {
+      setNotification({ show: false, type: '', message: '' });
+    }, 3000);
   };
 
   // Filter users berdasarkan tab aktif
@@ -180,19 +191,26 @@ export default function UserPage() {
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm("Yakin ingin menghapus pengguna ini?")) {
-      try {
-        setIsLoading(true);
-        await apiDelete(`/users/${id}`);
-        await fetchUsers(); // Refresh list
-        alert("Pengguna berhasil dihapus");
-      } catch (error) {
-        console.error("Error deleting user:", error);
-        alert("Gagal menghapus pengguna: " + error.message);
-      } finally {
-        setIsLoading(false);
-      }
+  const handleDeleteClick = (id, nama) => {
+    setDeleteTarget({ id, nama });
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+
+    try {
+      setIsLoading(true);
+      await apiDelete(`/users/${deleteTarget.id}`);
+      await fetchUsers(); // Refresh list
+      showNotification('success', "Pengguna berhasil dihapus");
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      showNotification('error', "Gagal menghapus pengguna: " + error.message);
+    } finally {
+      setIsLoading(false);
+      setShowDeleteModal(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -202,9 +220,53 @@ export default function UserPage() {
 
     try {
       if (formMode === "add") {
+        // Validation: Check required fields
+        if (!currentUser.nama.trim()) {
+          showNotification('error', "Nama lengkap wajib diisi");
+          setIsLoading(false);
+          return;
+        }
+        if (!currentUser.username.trim()) {
+          showNotification('error', "Username wajib diisi");
+          setIsLoading(false);
+          return;
+        }
+        if (!currentUser.email.trim()) {
+          showNotification('error', "Email wajib diisi");
+          setIsLoading(false);
+          return;
+        }
+        if (!currentUser.password.trim()) {
+          showNotification('error', "Password wajib diisi");
+          setIsLoading(false);
+          return;
+        }
+        
+        // Role-specific validation
+        if (currentUser.role === "admin" || currentUser.role === "super_admin") {
+          if (!currentUser.nip.trim()) {
+            showNotification('error', "NIP wajib diisi untuk role Admin/Super Admin");
+            setIsLoading(false);
+            return;
+          }
+        }
+        
+        if (currentUser.role === "mahasiswa") {
+          if (!currentUser.nim.trim()) {
+            showNotification('error', "NIM wajib diisi untuk role Mahasiswa");
+            setIsLoading(false);
+            return;
+          }
+          if (!currentUser.id_kelas) {
+            showNotification('error', "Kelas wajib dipilih untuk role Mahasiswa");
+            setIsLoading(false);
+            return;
+          }
+        }
+        
         // Validation: Check if trying to create super_admin when not logged as super_admin
         if (currentUser.role === "super_admin" && loggedUser?.role !== "super_admin") {
-          alert("Hanya Super Admin yang dapat membuat akun Super Admin baru");
+          showNotification('error', "Hanya Super Admin yang dapat membuat akun Super Admin baru");
           setIsLoading(false);
           return;
         }
@@ -246,11 +308,50 @@ export default function UserPage() {
           await apiPost("/users/mahasiswa", mahasiswaData);
         } else {
           // For super_admin or other roles (fallback)
-          alert("Role super_admin tidak dapat dibuat dari form ini");
+          showNotification('error', "Role super_admin tidak dapat dibuat dari form ini");
           return;
         }
-        alert("Pengguna berhasil ditambahkan");
+        showNotification('success', "Pengguna berhasil ditambahkan");
       } else {
+        // Validation for edit mode
+        if (!currentUser.nama.trim()) {
+          showNotification('error', "Nama lengkap wajib diisi");
+          setIsLoading(false);
+          return;
+        }
+        if (!currentUser.username.trim()) {
+          showNotification('error', "Username wajib diisi");
+          setIsLoading(false);
+          return;
+        }
+        if (!currentUser.email.trim()) {
+          showNotification('error', "Email wajib diisi");
+          setIsLoading(false);
+          return;
+        }
+        
+        // Role-specific validation for edit
+        if (currentUser.role === "admin" || currentUser.role === "super_admin") {
+          if (!currentUser.nip.trim()) {
+            showNotification('error', "NIP wajib diisi untuk role Admin/Super Admin");
+            setIsLoading(false);
+            return;
+          }
+        }
+        
+        if (currentUser.role === "mahasiswa") {
+          if (!currentUser.nim.trim()) {
+            showNotification('error', "NIM wajib diisi untuk role Mahasiswa");
+            setIsLoading(false);
+            return;
+          }
+          if (!currentUser.id_kelas) {
+            showNotification('error', "Kelas wajib dipilih untuk role Mahasiswa");
+            setIsLoading(false);
+            return;
+          }
+        }
+        
         // Update existing user
         if (currentUser.role === "admin") {
           // Update dosen
@@ -279,14 +380,14 @@ export default function UserPage() {
           }
           await apiPut(`/users/mahasiswa/${currentUser.id_user}`, updateData);
         }
-        alert("Pengguna berhasil diperbarui");
+        showNotification('success', "Pengguna berhasil diperbarui");
       }
 
       setIsModalOpen(false);
       await fetchUsers(); // Refresh list
     } catch (error) {
       console.error("Error saving user:", error);
-      alert("Gagal menyimpan pengguna: " + error.message);
+      showNotification('error', "Gagal menyimpan pengguna: " + error.message);
     } finally {
       setIsLoading(false);
     }
@@ -308,6 +409,17 @@ export default function UserPage() {
       activeNav={activeNav}
       setActiveNav={setActiveNav}
     >
+      {/* Notification */}
+      {notification.show && (
+        <div className="fixed top-4 right-4 z-50 animate-slide-in">
+          <div className={`px-6 py-4 rounded-xl shadow-lg flex items-center gap-3 ${
+            notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
+          } text-white`}>
+            {notification.type === 'success' ? '✓' : '✕'} {notification.message}
+          </div>
+        </div>
+      )}
+
       {/* Token Expiration Warning Banner */}
       {showTokenWarning && (
         <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4 rounded-r-lg">
@@ -449,7 +561,7 @@ export default function UserPage() {
                           </button>
                           {user.role !== "Super Admin" ? (
                             <button
-                              onClick={() => handleDelete(user.id_user)}
+                              onClick={() => handleDeleteClick(user.id_user, user.nama)}
                               disabled={isLoading}
                               className="text-red-600 hover:text-red-800 flex items-center gap-1 disabled:opacity-50"
                             >
@@ -493,7 +605,7 @@ export default function UserPage() {
 
       {/* Modal Form */}
       {isModalOpen && (
-        <div className="fixed top-0 left-0 right-0 bottom-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-[9999]">
+        <div className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-[9999] p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 relative max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-semibold mb-4 text-gray-800">
               {formMode === "add" ? "Tambah Pengguna" : "Edit Pengguna"}
@@ -502,7 +614,7 @@ export default function UserPage() {
               {/* Nama */}
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Nama Lengkap
+                  Nama Lengkap <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -519,7 +631,7 @@ export default function UserPage() {
               {/* Username */}
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Username
+                  Username <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -536,7 +648,7 @@ export default function UserPage() {
               {/* Email */}
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Email
+                  Email <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="email"
@@ -553,7 +665,7 @@ export default function UserPage() {
               {/* Password */}
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Password {formMode === "edit" && "(Kosongkan jika tidak ingin mengubah)"}
+                  Password {formMode === "add" && <span className="text-red-500">*</span>} {formMode === "edit" && "(Kosongkan jika tidak ingin mengubah)"}
                 </label>
                 <input
                   type="password"
@@ -599,10 +711,11 @@ export default function UserPage() {
               {(currentUser.role === "admin" || currentUser.role === "super_admin") && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
-                    NIP (Nomor Induk Pegawai)
+                    NIP (Nomor Induk Pegawai) <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
+                    required
                     value={currentUser.nip}
                     onChange={(e) =>
                       setCurrentUser({ ...currentUser, nip: e.target.value })
@@ -619,23 +732,26 @@ export default function UserPage() {
                 <>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">
-                      NIM
+                      NIM <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
+                      required
                       value={currentUser.nim}
                       onChange={(e) =>
                         setCurrentUser({ ...currentUser, nim: e.target.value })
                       }
                       className="w-full border border-gray-300 rounded-lg p-2 mt-1 focus:ring-2 focus:ring-blue-500 outline-none"
                       disabled={isLoading}
+                      placeholder="Masukkan NIM"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">
-                      Kelas
+                      Kelas <span className="text-red-500">*</span>
                     </label>
                     <select
+                      required
                       value={currentUser.id_kelas || ""}
                       onChange={(e) =>
                         setCurrentUser({
@@ -678,6 +794,43 @@ export default function UserPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-[9999] p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-red-100 p-3 rounded-full">
+                <AlertCircle className="h-6 w-6 text-red-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-800">Konfirmasi Hapus</h3>
+            </div>
+            <p className="text-gray-600 mb-6">
+              Apakah Anda yakin ingin menghapus pengguna <span className="font-semibold text-gray-900">"{deleteTarget?.nama}"</span>?
+              <br />
+              <span className="text-sm text-red-600 mt-2 block">Tindakan ini tidak dapat dibatalkan.</span>
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setDeleteTarget(null);
+                }}
+                className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                disabled={isLoading}
+                className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition disabled:opacity-50"
+              >
+                {isLoading ? 'Menghapus...' : 'Hapus'}
+              </button>
+            </div>
           </div>
         </div>
       )}

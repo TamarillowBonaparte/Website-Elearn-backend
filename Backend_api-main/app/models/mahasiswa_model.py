@@ -20,3 +20,4 @@ class Mahasiswa(Base):
     # Relationships
     user = relationship("User", backref="mahasiswa_profile")
     kelas = relationship("Kelas", backref="mahasiswa_list")
+    skor_materi = relationship("SkorMateri", back_populates="mahasiswa")

@@ -38,10 +38,14 @@ export default function Sidebar({
 
   const routes = {
     Dashboard: "/dashboard",
-    "Mata-kuliah": "/mata-kuliah",
+    "Assignment-Kelas": "/mata-kuliah",
     "jadwal-kuliah": "/jadwal-kuliah",
     presensi: "/presensi",
     materi: "/materi",
+    informasi: "/informasi",
+    "profil-saya": "/profil-saya",
+    "kelola-mata-kuliah": "/kelola-mata-kuliah",
+    "kelola-kelas": "/kelola-kelas",
     "kelola-dosen": "/kelola-dosen",
     User: "/user",
   };
@@ -73,6 +77,16 @@ export default function Sidebar({
         {navigationItems.map((item) => {
           // Hide super admin only items from non-super-admin users
           if (item.superAdminOnly && userRole !== "super_admin") {
+            return null;
+          }
+
+          // Hide admin only items from non-admin users (admin = dosen, don't show to super_admin)
+          if (item.adminOnly && userRole !== "admin") {
+            return null;
+          }
+
+          // Hide admin+super_admin items from mahasiswa
+          if (item.adminAndSuperAdmin && userRole !== "admin" && userRole !== "super_admin") {
             return null;
           }
 

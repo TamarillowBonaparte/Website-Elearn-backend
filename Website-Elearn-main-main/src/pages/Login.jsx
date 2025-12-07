@@ -163,8 +163,8 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Remember & Forgot */}
-          <div className="flex items-center justify-between text-sm">
+          {/* Remember */}
+          <div className="flex items-center text-sm">
             <label className="flex items-center cursor-pointer">
               <input
                 type="checkbox"
@@ -172,12 +172,6 @@ export default function LoginPage() {
               />
               <span className="ml-2 text-gray-600">Ingat saya</span>
             </label>
-            <a
-              href="#"
-              className="text-blue-600 hover:text-blue-700 font-semibold"
-            >
-              Lupa password?
-            </a>
           </div>
 
           {/* Login Button */}
@@ -199,19 +193,6 @@ export default function LoginPage() {
             )}
           </button>
         </form>
-
-        {/* Footer */}
-        <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600">
-            Belum punya akun?{" "}
-            <a
-              href="#"
-              className="text-blue-600 hover:text-blue-700 font-bold hover:underline"
-            >
-              Daftar sekarang
-            </a>
-          </p>
-        </div>
 
         {/* Divider */}
         <div className="mt-6 pt-6 border-t border-gray-200 text-center">

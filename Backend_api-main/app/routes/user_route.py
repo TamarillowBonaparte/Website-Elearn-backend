@@ -18,7 +18,7 @@ from app.schemas.dosen_schema import (
     UserDosenUpdate
 )
 from app.core.security import hash_password
-from app.utils.token_utils import require_super_admin
+from app.utils.token_utils import require_super_admin, get_current_user
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -456,6 +456,114 @@ def update_mahasiswa(
 
 # =====================================================
 # UPDATE USER (Dosen)
+# =====================================================
+# =====================================================
+# UPDATE DOSEN SELF PROFILE (for dosen editing their own profile)
+# =====================================================
+@router.put("/dosen/me/profile", response_model=UserDosenResponse)
+def update_own_dosen_profile(
+    update_data: UserDosenUpdate, 
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Update own dosen profile - Dosen can edit their own profile"""
+    # Verify user is a dosen/admin
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Hanya dosen yang dapat mengakses endpoint ini")
+    
+    user_id = current_user.get("user_id")
+    user = db.query(User).filter(User.id_user == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User tidak ditemukan")
+    
+    try:
+        # Update user fields
+        if update_data.username is not None:
+            existing = db.query(User).filter(
+                User.username == update_data.username,
+                User.id_user != user_id
+            ).first()
+            if existing:
+                raise HTTPException(status_code=400, detail="Username sudah digunakan")
+            user.username = update_data.username
+        
+        if update_data.email is not None:
+            existing = db.query(User).filter(
+                User.email == update_data.email,
+                User.id_user != user_id
+            ).first()
+            if existing:
+                raise HTTPException(status_code=400, detail="Email sudah digunakan")
+            user.email = update_data.email
+        
+        if update_data.password is not None and update_data.password != "":
+            user.password = hash_password(update_data.password)
+        
+        # Dosen cannot change their own is_active status
+        # if update_data.is_active is not None:
+        #     user.is_active = update_data.is_active
+        
+        # Update dosen profile
+        dosen = db.query(Dosen).filter(Dosen.user_id == user_id).first()
+        if not dosen:
+            raise HTTPException(status_code=404, detail="Profil dosen tidak ditemukan")
+        
+        if update_data.nip is not None:
+            existing = db.query(Dosen).filter(
+                Dosen.nip == update_data.nip,
+                Dosen.id_dosen != dosen.id_dosen
+            ).first()
+            if existing:
+                raise HTTPException(status_code=400, detail="NIP sudah digunakan")
+            dosen.nip = update_data.nip
+        
+        if update_data.nama_dosen is not None:
+            dosen.nama_dosen = update_data.nama_dosen
+        if update_data.email_dosen is not None:
+            dosen.email_dosen = update_data.email_dosen
+        if update_data.tempat_lahir is not None:
+            dosen.tempat_lahir = update_data.tempat_lahir
+        if update_data.tanggal_lahir is not None:
+            dosen.tanggal_lahir = update_data.tanggal_lahir
+        if update_data.jenis_kelamin is not None:
+            dosen.jenis_kelamin = update_data.jenis_kelamin
+        if update_data.agama is not None:
+            dosen.agama = update_data.agama
+        if update_data.alamat is not None:
+            dosen.alamat = update_data.alamat
+        if update_data.no_hp is not None:
+            dosen.no_hp = update_data.no_hp
+        
+        db.commit()
+        db.refresh(user)
+        db.refresh(dosen)
+        
+        # Build response
+        return {
+            "id_user": user.id_user,
+            "username": user.username,
+            "email": user.email,
+            "role": user.role.value if hasattr(user.role, 'value') else user.role,
+            "is_active": user.is_active,
+            "id_dosen": dosen.id_dosen,
+            "nip": dosen.nip,
+            "nama_dosen": dosen.nama_dosen,
+            "email_dosen": dosen.email_dosen,
+            "tempat_lahir": dosen.tempat_lahir,
+            "tanggal_lahir": dosen.tanggal_lahir,
+            "jenis_kelamin": dosen.jenis_kelamin,
+            "agama": dosen.agama,
+            "alamat": dosen.alamat,
+            "no_hp": dosen.no_hp
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Gagal update profil: {str(e)}")
+
+# =====================================================
+# UPDATE DOSEN (by super_admin)
 # =====================================================
 @router.put("/dosen/{user_id}", response_model=UserDosenResponse)
 def update_dosen(

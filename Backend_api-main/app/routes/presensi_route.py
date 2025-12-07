@@ -326,6 +326,91 @@ def update_status_presensi(
     }
 
 
+@router.put("/admin/update-status/{id_presensi}")
+def admin_update_status_presensi(
+    id_presensi: int,
+    request: dict,
+    db: Session = Depends(get_db)
+):
+    """
+    Update status presensi mahasiswa oleh admin/super_admin
+    Simple update tanpa keterangan wajib
+    """
+    
+    status = request.get("status")
+    
+    print(f"🔍 DEBUG - Received request: {request}")
+    print(f"🔍 DEBUG - Status value: '{status}'")
+    print(f"🔍 DEBUG - ID Presensi: {id_presensi}")
+    
+    if not status or status not in ["Hadir", "Belum Absen", "Alfa"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Status tidak valid: '{status}'. Harus 'Hadir', 'Belum Absen', atau 'Alfa'"
+        )
+    
+    presensi = db.query(Presensi).filter(Presensi.id_presensi == id_presensi).first()
+    
+    if not presensi:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Presensi tidak ditemukan"
+        )
+    
+    # Update status
+    old_status = presensi.status
+    print(f"🔍 DEBUG - Old status: '{old_status}' -> New status: '{status}'")
+    
+    presensi.status = status
+    
+    # Set keterangan otomatis untuk menandai admin sudah edit
+    # Ini akan mencegah auto-update Alfa menimpa edit manual
+    if not presensi.keterangan:
+        presensi.keterangan = "[Admin Edit]"
+    
+    # Update waktu_input jika status berubah menjadi Hadir
+    if status == "Hadir" and old_status != "Hadir":
+        presensi.waktu_input = datetime.now()
+    elif status != "Hadir":
+        # Reset waktu_input jika bukan Hadir
+        presensi.waktu_input = None
+    
+    try:
+        db.flush()  # Force write to database
+        db.commit()
+        db.refresh(presensi)
+        print(f"✅ DEBUG - Status updated successfully in DB: {presensi.status}")
+        print(f"✅ DEBUG - Presensi object after commit: id={presensi.id_presensi}, status={presensi.status}")
+        
+        # Verify in database with raw query
+        verify_query = text("SELECT status FROM presensi WHERE id_presensi = :id")
+        verify_result = db.execute(verify_query, {"id": id_presensi}).fetchone()
+        print(f"✅ DEBUG - Verified in DB with raw query: status={verify_result[0] if verify_result else 'NOT FOUND'}")
+        
+    except Exception as e:
+        db.rollback()
+        print(f"❌ DEBUG - Error committing: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error updating database: {str(e)}"
+        )
+    
+    # Get mahasiswa info for response
+    mahasiswa = db.query(Mahasiswa).filter(Mahasiswa.id_mahasiswa == presensi.id_mahasiswa).first()
+    
+    return {
+        "message": "Status presensi berhasil diupdate oleh admin",
+        "data": {
+            "id_presensi": presensi.id_presensi,
+            "nim": mahasiswa.nim if mahasiswa else None,
+            "nama": mahasiswa.nama if mahasiswa else None,
+            "old_status": old_status,
+            "new_status": presensi.status,
+            "waktu_input": presensi.waktu_input
+        }
+    }
+
+
 @router.delete("/delete/{id_kelas_mk}/{tanggal}/{pertemuan_ke}")
 def delete_presensi(
     id_kelas_mk: int,
@@ -361,6 +446,48 @@ def delete_presensi(
 # ============================================
 # ANDROID INTEGRATION ENDPOINTS
 # ============================================
+
+@router.get("/debug/mahasiswa/{id_mahasiswa}")
+def debug_presensi_mahasiswa(
+    id_mahasiswa: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Debug endpoint untuk cek data mahasiswa dan presensinya
+    """
+    # Get mahasiswa info
+    mahasiswa = db.query(Mahasiswa).filter(Mahasiswa.id_mahasiswa == id_mahasiswa).first()
+    if not mahasiswa:
+        return {"error": "Mahasiswa tidak ditemukan"}
+    
+    # Get all presensi
+    all_presensi = db.query(Presensi).filter(Presensi.id_mahasiswa == id_mahasiswa).all()
+    
+    # Get kelas info
+    from app.models.kelas_model import Kelas
+    kelas_info = db.query(Kelas).filter(Kelas.id_kelas == mahasiswa.id_kelas).first()
+    
+    return {
+        "mahasiswa": {
+            "id_mahasiswa": mahasiswa.id_mahasiswa,
+            "nim": mahasiswa.nim,
+            "nama": mahasiswa.nama,
+            "id_kelas": mahasiswa.id_kelas,
+            "nama_kelas": kelas_info.nama_kelas if kelas_info else None
+        },
+        "total_presensi": len(all_presensi),
+        "presensi_list": [
+            {
+                "id_presensi": p.id_presensi,
+                "id_kelas_mk": p.id_kelas_mk,
+                "tanggal": str(p.tanggal),
+                "pertemuan_ke": p.pertemuan_ke,
+                "status": p.status,
+                "waktu_mulai": str(p.waktu_mulai) if p.waktu_mulai else None,
+                "waktu_selesai": str(p.waktu_selesai) if p.waktu_selesai else None
+            } for p in all_presensi
+        ]
+    }
 
 @router.get("/mahasiswa/{id_mahasiswa}", response_model=List[PresensiMahasiswaResponse])
 def get_presensi_mahasiswa(

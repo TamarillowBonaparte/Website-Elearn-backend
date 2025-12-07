@@ -5,9 +5,11 @@ import { navigationItems } from "../navigation/navigation";
 import { useParams, useNavigate } from "react-router-dom";
 import { 
   ArrowLeft, Plus, Edit2, Trash2, FileText, Calendar, 
-  X, Upload, CheckCircle, AlertCircle 
+  X, Upload, CheckCircle, AlertCircle, BarChart3, Users, 
+  TrendingUp, Clock, Eye, Award
 } from "lucide-react";
 import axios from "axios";
+import { apiGet } from "../utils/apiUtils";
 
 const API_BASE_URL = "http://localhost:8000";
 
@@ -25,6 +27,11 @@ export default function MingguMateri() {
   const [selectedMateri, setSelectedMateri] = useState(null);
   const [saving, setSaving] = useState(false);
   const [notification, setNotification] = useState({ show: false, type: '', message: '' });
+  const [showSkorModal, setShowSkorModal] = useState(false);
+  const [skorData, setSkorData] = useState(null);
+  const [loadingSkor, setLoadingSkor] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -214,15 +221,42 @@ export default function MingguMateri() {
     }
   };
 
-  // Delete materi
-  const handleDelete = async (materiData) => {
-    if (!window.confirm(`Apakah Anda yakin ingin menghapus materi "${materiData.judul}"?`)) {
-      return;
-    }
+  // Fetch skor materi
+  const handleLihatSkor = async (materiData) => {
+    setLoadingSkor(true);
+    setShowSkorModal(true);
+    setSkorData(null);
 
     try {
+      const data = await apiGet(`/skor-materi/statistik/${materiData.id_materi}`);
+      setSkorData(data);
+    } catch (error) {
+      console.error("Error fetching skor:", error);
+      showNotification('error', 'Gagal mengambil data skor');
+      setShowSkorModal(false);
+    } finally {
+      setLoadingSkor(false);
+    }
+  };
+
+  // Format waktu (detik ke menit:detik)
+  const formatWaktu = (detik) => {
+    if (!detik) return '0:00';
+    const menit = Math.floor(detik / 60);
+    const sisaDetik = detik % 60;
+    return `${menit}:${sisaDetik.toString().padStart(2, '0')}`;
+  };
+
+  // Delete materi
+  const handleDeleteClick = (materiData) => {
+    setDeleteTarget(materiData);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    try {
       const token = localStorage.getItem("token");
-      await axios.delete(`${API_BASE_URL}/materi/${materiData.id_materi}`, {
+      await axios.delete(`${API_BASE_URL}/materi/${deleteTarget.id_materi}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -231,6 +265,9 @@ export default function MingguMateri() {
     } catch (error) {
       console.error("Error deleting materi:", error);
       showNotification('error', 'Gagal menghapus materi');
+    } finally {
+      setShowDeleteModal(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -351,7 +388,7 @@ export default function MingguMateri() {
                         <FileText className="h-4 w-4" /> Lihat PDF
                       </button>
                     )}
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 mb-2">
                       <button
                         onClick={() => handleOpenModal("edit", materiData)}
                         className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition font-medium"
@@ -359,12 +396,19 @@ export default function MingguMateri() {
                         <Edit2 className="h-4 w-4" /> Edit
                       </button>
                       <button
-                        onClick={() => handleDelete(materiData)}
+                        onClick={() => handleDeleteClick(materiData)}
                         className="flex-1 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition font-medium"
                       >
                         <Trash2 className="h-4 w-4" /> Hapus
                       </button>
                     </div>
+                    {/* Button Lihat Skor */}
+                    <button
+                      onClick={() => handleLihatSkor(materiData)}
+                      className="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition font-medium"
+                    >
+                      <BarChart3 className="h-4 w-4" /> Lihat Skor Mahasiswa
+                    </button>
                   </div>
                 </div>
               </div>
@@ -375,7 +419,7 @@ export default function MingguMateri() {
 
       {/* Modal Form */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+        <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, margin: 0}} className="w-screen h-screen bg-black/60 flex items-center justify-center z-[100] p-4 backdrop-blur-sm">
           <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl transform transition-all">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-bold text-gray-800">
@@ -468,6 +512,208 @@ export default function MingguMateri() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Skor Materi */}
+      {showSkorModal && (
+        <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, margin: 0}} className="w-screen h-screen bg-black/60 flex items-center justify-center z-[100] p-4 backdrop-blur-sm overflow-y-auto">
+          <div className="bg-white rounded-2xl p-6 max-w-5xl w-full shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6 sticky top-0 bg-white pb-4 border-b">
+              <h3 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                <BarChart3 className="text-purple-600" />
+                Statistik Skor Materi
+              </h3>
+              <button
+                onClick={() => setShowSkorModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            {loadingSkor ? (
+              <div className="flex justify-center items-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+                <p className="ml-4 text-gray-600">Memuat data skor...</p>
+              </div>
+            ) : skorData ? (
+              <div>
+                {/* Info Materi */}
+                <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-6 mb-6 border border-purple-200">
+                  <h4 className="text-lg font-bold text-gray-800 mb-2 flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-purple-600" />
+                    {skorData.judul_materi}
+                  </h4>
+                </div>
+
+                {/* Statistik Summary */}
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+                  <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
+                    <div className="flex items-center justify-between mb-2">
+                      <Users className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div className="text-2xl font-bold text-blue-700">{skorData.total_mahasiswa_kelas}</div>
+                    <p className="text-xs text-gray-600">Total Mahasiswa</p>
+                  </div>
+
+                  <div className="bg-green-50 rounded-xl p-4 border border-green-200">
+                    <div className="flex items-center justify-between mb-2">
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                    </div>
+                    <div className="text-2xl font-bold text-green-700">{skorData.total_sudah_baca}</div>
+                    <p className="text-xs text-gray-600">Sudah Membaca</p>
+                  </div>
+
+                  <div className="bg-red-50 rounded-xl p-4 border border-red-200">
+                    <div className="flex items-center justify-between mb-2">
+                      <AlertCircle className="h-5 w-5 text-red-600" />
+                    </div>
+                    <div className="text-2xl font-bold text-red-700">{skorData.total_belum_baca}</div>
+                    <p className="text-xs text-gray-600">Belum Membaca</p>
+                  </div>
+
+                  <div className="bg-purple-50 rounded-xl p-4 border border-purple-200">
+                    <div className="flex items-center justify-between mb-2">
+                      <Award className="h-5 w-5 text-purple-600" />
+                    </div>
+                    <div className="text-2xl font-bold text-purple-700">
+                      {skorData.rata_rata_skor ? skorData.rata_rata_skor.toFixed(1) : '-'}
+                    </div>
+                    <p className="text-xs text-gray-600">Rata-rata Skor</p>
+                  </div>
+
+                  <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
+                    <div className="flex items-center justify-between mb-2">
+                      <Clock className="h-5 w-5 text-amber-600" />
+                    </div>
+                    <div className="text-2xl font-bold text-amber-700">
+                      {skorData.rata_rata_waktu_belajar ? formatWaktu(Math.round(skorData.rata_rata_waktu_belajar)) : '-'}
+                    </div>
+                    <p className="text-xs text-gray-600">Rata-rata Waktu</p>
+                  </div>
+                </div>
+
+                {/* Tabel Mahasiswa */}
+                {skorData.daftar_skor && skorData.daftar_skor.length > 0 ? (
+                  <div className="border border-gray-200 rounded-xl overflow-hidden">
+                    <div className="bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-3">
+                      <h5 className="text-white font-semibold flex items-center gap-2">
+                        <TrendingUp className="h-5 w-5" />
+                        Detail Skor Mahasiswa ({skorData.daftar_skor.length})
+                      </h5>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">No</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">NIM</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Nama Mahasiswa</th>
+                            <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Skor</th>
+                            <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Waktu Belajar</th>
+                            <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Waktu Fokus</th>
+                            <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Gangguan</th>
+                            <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Mode</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {skorData.daftar_skor.map((skor, index) => (
+                            <tr key={skor.id_skor} className="hover:bg-gray-50 transition">
+                              <td className="px-4 py-3 text-sm text-gray-700">{index + 1}</td>
+                              <td className="px-4 py-3 text-sm text-gray-700 font-mono">{skor.nim}</td>
+                              <td className="px-4 py-3 text-sm text-gray-800 font-medium">{skor.nama_mahasiswa}</td>
+                              <td className="px-4 py-3 text-center">
+                                <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-bold ${
+                                  skor.skor_perhatian >= 80 ? 'bg-green-100 text-green-700' :
+                                  skor.skor_perhatian >= 60 ? 'bg-yellow-100 text-yellow-700' :
+                                  'bg-red-100 text-red-700'
+                                }`}>
+                                  {skor.skor_perhatian}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-center text-sm text-gray-700">{formatWaktu(skor.waktu_belajar)}</td>
+                              <td className="px-4 py-3 text-center text-sm text-gray-700">{formatWaktu(skor.waktu_fokus)}</td>
+                              <td className="px-4 py-3 text-center">
+                                <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${
+                                  skor.jumlah_gangguan === 0 ? 'bg-green-100 text-green-700' :
+                                  skor.jumlah_gangguan <= 3 ? 'bg-yellow-100 text-yellow-700' :
+                                  'bg-red-100 text-red-700'
+                                }`}>
+                                  {skor.jumlah_gangguan}x
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-center">
+                                <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
+                                  skor.tracking_mode === 'camera' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'
+                                }`}>
+                                  {skor.tracking_mode === 'camera' ? <Eye className="h-3 w-3" /> : null}
+                                  {skor.tracking_mode}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-gray-50 border border-gray-200 rounded-xl p-8 text-center">
+                    <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                    <p className="text-gray-600 font-medium">Belum ada mahasiswa yang membaca materi ini</p>
+                    <p className="text-sm text-gray-500 mt-1">Data skor akan muncul setelah mahasiswa membaca materi melalui aplikasi mobile</p>
+                  </div>
+                )}
+
+                {/* Keterangan */}
+                <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-sm text-blue-800">
+                    <strong>💡 Keterangan:</strong> Skor perhatian dihitung berdasarkan waktu fokus, waktu belajar, dan jumlah gangguan saat mahasiswa membaca materi melalui aplikasi mobile dengan eye-tracking.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                Tidak ada data
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, margin: 0}} className="w-screen h-screen bg-black/60 flex items-center justify-center z-[100] backdrop-blur-sm">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-red-100 p-3 rounded-full">
+                <AlertCircle className="h-6 w-6 text-red-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-800">Konfirmasi Hapus</h3>
+            </div>
+            <p className="text-gray-600 mb-6">
+              Apakah Anda yakin ingin menghapus materi <span className="font-semibold text-gray-900">"{deleteTarget?.judul}"</span>?
+              <br />
+              <span className="text-sm text-red-600 mt-2 block">Tindakan ini tidak dapat dibatalkan.</span>
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setDeleteTarget(null);
+                }}
+                className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition"
+              >
+                Hapus
+              </button>
+            </div>
           </div>
         </div>
       )}
