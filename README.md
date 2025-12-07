@@ -1,5 +1,5 @@
 # E-learn - Website & Android Aplication
-(gambar)
+<img width="3780" height="1890" alt="Banner Selamat Menempuh Ujian Akhir dalam Gaya Kartun Merah" src="https://github.com/user-attachments/assets/7080b482-62ce-499c-a071-aaf801cfd762" />
 Lom ado deskripsinyo
 
 
