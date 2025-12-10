@@ -2,20 +2,25 @@ import Header from "../components/header";
 import Sidebar from "../components/sidebar";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { clearAuth } from "../utils/auth";
 
 export default function DashboardLayout({
   children,
   navigationItems,
   activeNav,
   setActiveNav,
+  onLogout,
 }) {
   const navigate = useNavigate();
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    navigate("/login");
+    if (onLogout) {
+      onLogout();
+    } else {
+      clearAuth();
+      window.location.href = "/login";
+    }
   };
 
   const toggleMobileSidebar = () => {
@@ -52,11 +57,10 @@ export default function DashboardLayout({
             inset-y-0 left-0 z-50 lg:z-0
             w-56 lg:w-48
             transform transition-transform duration-300 ease-in-out lg:transform-none
-            ${
-              isMobileSidebarOpen
+            ${isMobileSidebarOpen
                 ? "translate-x-0"
                 : "-translate-x-full lg:translate-x-0"
-            }
+              }
           `}
           >
             <Sidebar

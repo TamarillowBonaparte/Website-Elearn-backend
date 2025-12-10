@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import DashboardLayout from "../layouts/dashboardlayout";
 import { navigationItems } from "../navigation/navigation";
 import { apiGet, apiPost, apiPut, apiDelete } from "../utils/apiUtils";
+import { getUser } from "../utils/auth";
 import {
   UserPlus,
   Edit,
@@ -55,10 +56,9 @@ export default function UserPage() {
 
   // Get logged in user from localStorage
   useEffect(() => {
-    const userStr = localStorage.getItem('user');
-    if (userStr) {
-      const user = JSON.parse(userStr);
-      setLoggedUser(user);
+    const storedUser = getUser();
+    if (storedUser) {
+      setLoggedUser(storedUser);
     }
   }, []);
 
@@ -449,8 +449,8 @@ export default function UserPage() {
           <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
             <Users className="text-blue-600" /> Manajemen Pengguna
           </h1>
-          {/* Only super_admin can add users */}
-          {loggedUser?.role === "super_admin" && (
+          {/* Admin and Super Admin can add users */}
+          {(loggedUser?.role === "super_admin" || loggedUser?.role === "admin") && (
             <button
               onClick={openAddModal}
               className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow transition"
@@ -549,8 +549,8 @@ export default function UserPage() {
                       {user.role === "Mahasiswa" ? user.kelas : "-"}
                     </td>
                     <td className="p-3 flex gap-3">
-                      {/* Only super_admin can edit and delete users */}
-                      {loggedUser?.role === "super_admin" ? (
+                      {/* Admin and Super Admin can edit and delete users */}
+                      {(loggedUser?.role === "super_admin" || loggedUser?.role === "admin") ? (
                         <>
                           <button
                             onClick={() => openEditModal(user)}

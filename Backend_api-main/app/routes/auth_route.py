@@ -4,7 +4,7 @@ from app.core.database import get_db
 from app.models.user_model import User
 from app.schemas.user_schema import UserRegister, UserLogin, UserResponse
 from app.core.security import hash_password, verify_password
-from app.utils.token_utils import create_access_token
+from app.utils.token_utils import create_access_token, get_current_user
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -84,6 +84,23 @@ def login(request: UserLogin, db: Session = Depends(get_db)):
         "access_token": access_token, 
         "token_type": "bearer",
         "user": user_info
+    }
+
+
+@router.get("/me")
+def get_current_user_info(
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Get current authenticated user info from token
+    Useful for debugging token payload
+    """
+    return {
+        "user_id": current_user.get("user_id"),
+        "username": current_user.get("username"),
+        "role": current_user.get("role"),
+        "email": current_user.get("email"),
+        "full_payload": current_user
     }
 
 

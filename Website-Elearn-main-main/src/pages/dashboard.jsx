@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { 
+import {
   Users, BookOpen, FileText, CheckCircle, Calendar, TrendingUp
 } from "lucide-react";
 import DashboardLayout from "../layouts/dashboardlayout";
 import { navigationItems } from "../navigation/navigation";
 import { apiRequest } from "../utils/apiUtils";
+import { usePolling } from "../hooks/usePolling";
+import { getToken, getUser, clearAuth } from "../utils/auth";
 
 const Dashboard = () => {
   const [activeNav, setActiveNav] = useState("Dashboard");
@@ -16,45 +18,48 @@ const Dashboard = () => {
 
   // Load dashboard data
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const token = getToken();
     if (!token) {
       navigate('/login');
       return;
     }
 
     // Set user info
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const user = getUser();
     setUserInfo(user);
 
     // Load dashboard stats
     loadDashboardData();
   }, [navigate]);
 
-  const loadDashboardData = async () => {
+  // Poll for dashboard updates every 5 seconds
+  // usePolling(() => loadDashboardData(false), 5000);
+
+  const loadDashboardData = async (showLoading = true) => {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       const response = await apiRequest('/dashboard/stats', { method: 'GET' });
       const data = await response.json();
       setDashboardData(data);
     } catch (error) {
       console.error('Error loading dashboard:', error);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    navigate('/login');
+    clearAuth();
+    // Force full page reload to ensure clean state
+    window.location.href = '/login';
   };
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('id-ID', { 
-      day: 'numeric', 
-      month: 'short', 
-      year: 'numeric' 
+    return date.toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
     });
   };
 
@@ -97,9 +102,9 @@ const Dashboard = () => {
   ] : [];
 
   return (
-    <DashboardLayout 
-      navigationItems={navigationItems} 
-      activeNav={activeNav} 
+    <DashboardLayout
+      navigationItems={navigationItems}
+      activeNav={activeNav}
       setActiveNav={setActiveNav}
       onLogout={handleLogout}
     >
@@ -109,7 +114,7 @@ const Dashboard = () => {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold mb-2">
-                Selamat Datang, {userInfo.username}!
+                Selamat Datang, {userInfo?.nama || userInfo?.username || 'User'}!
               </h1>
               <p className="text-blue-100 text-lg">
                 Dashboard E-Learning - Kelola presensi dan materi pembelajaran
@@ -128,8 +133,8 @@ const Dashboard = () => {
           {stats.map((stat, index) => {
             const Icon = stat.icon;
             return (
-              <div 
-                key={index} 
+              <div
+                key={index}
                 className="bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
               >
                 <div className="flex items-center justify-between">
@@ -156,7 +161,7 @@ const Dashboard = () => {
               </div>
               <Calendar className="h-5 w-5 text-gray-400" />
             </div>
-            
+
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
@@ -172,13 +177,13 @@ const Dashboard = () => {
                 </thead>
                 <tbody>
                   {dashboardData.recent_presensi.map((presensi, index) => {
-                    const persentaseHadir = presensi.total_mhs > 0 
-                      ? Math.round((presensi.hadir / presensi.total_mhs) * 100) 
+                    const persentaseHadir = presensi.total_mhs > 0
+                      ? Math.round((presensi.hadir / presensi.total_mhs) * 100)
                       : 0;
-                    
+
                     return (
-                      <tr 
-                        key={index} 
+                      <tr
+                        key={index}
                         className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
                       >
                         <td className="py-3 px-4">
@@ -208,7 +213,7 @@ const Dashboard = () => {
                         <td className="py-3 px-4 text-center">
                           <div className="flex items-center justify-center gap-2">
                             <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-                              <div 
+                              <div
                                 className={`h-full ${persentaseHadir >= 75 ? 'bg-green-500' : persentaseHadir >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`}
                                 style={{ width: `${persentaseHadir}%` }}
                               ></div>

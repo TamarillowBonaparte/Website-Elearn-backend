@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import DashboardLayout from "../layouts/dashboardlayout";
+import { usePolling } from "../hooks/usePolling";
 import { navigationItems } from "../navigation/navigation";
-import { 
-  User, Mail, Phone, MapPin, Calendar, Award, 
+import {
+  User, Mail, Phone, MapPin, Calendar, Award,
   ArrowLeft, BookOpen, BarChart3, Users
 } from "lucide-react";
 import axios from "axios";
+import { getToken } from "../utils/auth";
 
 const API_BASE_URL = "http://localhost:8000";
 
@@ -19,15 +21,23 @@ export default function DetailProfilDosen() {
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
 
+
+
   useEffect(() => {
     fetchDosenDetail();
     fetchAssignments();
   }, [id_dosen]);
 
+  // Poll for updates every 5 seconds
+  usePolling(() => {
+    fetchDosenDetail();
+    fetchAssignments();
+  }, 5000);
+
   const fetchDosenDetail = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem("token");
+      const token = getToken();
       const response = await axios.get(`${API_BASE_URL}/dosen/${id_dosen}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -41,7 +51,7 @@ export default function DetailProfilDosen() {
 
   const fetchAssignments = async () => {
     try {
-      const token = localStorage.getItem("token");
+      const token = getToken();
       const response = await axios.get(`${API_BASE_URL}/kelas-mata-kuliah/dosen/${id_dosen}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -55,10 +65,10 @@ export default function DetailProfilDosen() {
   const formatDate = (dateString) => {
     if (!dateString) return '-';
     const date = new Date(dateString);
-    return date.toLocaleDateString('id-ID', { 
-      day: 'numeric', 
-      month: 'long', 
-      year: 'numeric' 
+    return date.toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
     });
   };
 
@@ -128,31 +138,28 @@ export default function DetailProfilDosen() {
             <div className="flex">
               <button
                 onClick={() => setActiveTab("profil")}
-                className={`flex items-center gap-2 px-6 py-4 border-b-2 transition ${
-                  activeTab === "profil"
-                    ? "border-blue-600 text-blue-600 font-semibold"
-                    : "border-transparent text-gray-600 hover:text-gray-900"
-                }`}
+                className={`flex items-center gap-2 px-6 py-4 border-b-2 transition ${activeTab === "profil"
+                  ? "border-blue-600 text-blue-600 font-semibold"
+                  : "border-transparent text-gray-600 hover:text-gray-900"
+                  }`}
               >
                 <User className="h-5 w-5" /> Info Pribadi
               </button>
               <button
                 onClick={() => setActiveTab("assignment")}
-                className={`flex items-center gap-2 px-6 py-4 border-b-2 transition ${
-                  activeTab === "assignment"
-                    ? "border-blue-600 text-blue-600 font-semibold"
-                    : "border-transparent text-gray-600 hover:text-gray-900"
-                }`}
+                className={`flex items-center gap-2 px-6 py-4 border-b-2 transition ${activeTab === "assignment"
+                  ? "border-blue-600 text-blue-600 font-semibold"
+                  : "border-transparent text-gray-600 hover:text-gray-900"
+                  }`}
               >
                 <BookOpen className="h-5 w-5" /> Assignment ({assignments.length})
               </button>
               <button
                 onClick={() => setActiveTab("statistik")}
-                className={`flex items-center gap-2 px-6 py-4 border-b-2 transition ${
-                  activeTab === "statistik"
-                    ? "border-blue-600 text-blue-600 font-semibold"
-                    : "border-transparent text-gray-600 hover:text-gray-900"
-                }`}
+                className={`flex items-center gap-2 px-6 py-4 border-b-2 transition ${activeTab === "statistik"
+                  ? "border-blue-600 text-blue-600 font-semibold"
+                  : "border-transparent text-gray-600 hover:text-gray-900"
+                  }`}
               >
                 <BarChart3 className="h-5 w-5" /> Statistik
               </button>
@@ -164,7 +171,7 @@ export default function DetailProfilDosen() {
             {activeTab === "profil" && (
               <div className="space-y-6">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Informasi Pribadi</h3>
-                
+
                 <div className="grid md:grid-cols-2 gap-6">
                   {/* NIP */}
                   <div className="flex items-start gap-3">
@@ -253,7 +260,7 @@ export default function DetailProfilDosen() {
             {activeTab === "assignment" && (
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Daftar Assignment</h3>
-                
+
                 {assignments.length === 0 ? (
                   <div className="text-center py-12 text-gray-500">
                     <BookOpen className="h-12 w-12 mx-auto mb-3 text-gray-300" />
@@ -289,11 +296,10 @@ export default function DetailProfilDosen() {
                               </span>
                             </div>
                           </div>
-                          <span className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
-                            assignment.status === 'Aktif' 
-                              ? 'bg-green-100 text-green-700' 
-                              : 'bg-gray-100 text-gray-700'
-                          }`}>
+                          <span className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${assignment.status === 'Aktif'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-gray-100 text-gray-700'
+                            }`}>
                             {assignment.status}
                           </span>
                         </div>
@@ -307,7 +313,7 @@ export default function DetailProfilDosen() {
             {activeTab === "statistik" && (
               <div className="space-y-6">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Statistik</h3>
-                
+
                 <div className="grid md:grid-cols-3 gap-6">
                   <div className="bg-blue-50 rounded-xl p-6 border border-blue-100">
                     <div className="flex items-center justify-between mb-2">

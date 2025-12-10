@@ -363,6 +363,46 @@ async def create_materi(
         print(f"   📝 ID: {new_materi.id_materi}")
         print(f"   📄 file_pdf in DB: {new_materi.file_pdf}")
 
+        # Send Push Notification
+        try:
+            from app.services.notification_service import notification_service
+            from app.models.user_device_model import UserDevice
+            from app.models.mahasiswa_model import Mahasiswa
+            
+            if not notification_service.active:
+                print("⚠️ Notification service not active, skipping push notification")
+            else:
+                # Find all students in this class
+                students = db.query(Mahasiswa).filter(Mahasiswa.id_kelas == id_kelas).all()
+                student_user_ids = [s.user_id for s in students if s.user_id]
+                
+                if student_user_ids:
+                    devices = db.query(UserDevice).filter(
+                        UserDevice.id_user.in_(student_user_ids)
+                    ).all()
+                    tokens = [d.fcm_token for d in devices if d.fcm_token]
+                    
+                    if tokens:
+                        print(f"📱 Sending materi notification to {len(tokens)} devices")
+                        result = notification_service.send_multicast(
+                            tokens=tokens,
+                            title="📚 Materi Baru",
+                            body=f"Materi '{judul}' telah ditambahkan untuk minggu {minggu}.",
+                            data={
+                                "type": "materi",
+                                "id_materi": str(new_materi.id_materi),
+                                "kode_mk": kode_mk,
+                                "action": "open_materi"
+                            },
+                            db_session=db
+                        )
+                        print(f"✅ Materi notifications sent: {result}")
+                    else:
+                        print("ℹ️ No devices found for students")
+        except Exception as e:
+            print(f"❌ Error sending materi notification: {e}")
+            # Don't fail the whole request
+
         return new_materi
         
     except HTTPException:
@@ -370,6 +410,9 @@ async def create_materi(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
 
 
 # ===========================

@@ -11,17 +11,26 @@ import {
   GraduationCap,
 } from "lucide-react";
 
+import {
+  setToken,
+  setUser,
+  setRole,
+  setUsername,
+  getToken,
+} from "../utils/auth";
+
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
-  const [username, setUsername] = useState("");
+  const [username, setUsernameInput] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
   // Cek jika sudah login, redirect ke dashboard
   useEffect(() => {
-    const token = localStorage.getItem("token");
+    const token = getToken();
     if (token) {
       navigate("/dashboard");
     }
@@ -62,12 +71,16 @@ export default function LoginPage() {
       }
 
       // Simpan token dan user info
-      localStorage.setItem("token", data.access_token);
-      localStorage.setItem("user", JSON.stringify(data.user));
-      localStorage.setItem("role", data.user.role);
-      localStorage.setItem("username", data.user.username);
+      setToken(data.access_token, rememberMe);
+      setUser(data.user, rememberMe);
+      setRole(data.user.role, rememberMe);
+      setUsername(data.user.username, rememberMe);
 
-      console.log("✅ Login success, role:", data.user.role);
+      console.log("✅ Login success");
+      console.log("User data:", data.user);
+      console.log("Role:", data.user.role);
+      console.log("Is super_admin?", data.user.role === 'super_admin');
+      console.log("Storage type:", rememberMe ? 'localStorage' : 'sessionStorage');
 
       // Redirect ke dashboard
       navigate("/dashboard");
@@ -118,7 +131,7 @@ export default function LoginPage() {
                 type="text"
                 value={username}
                 onChange={(e) => {
-                  setUsername(e.target.value);
+                  setUsernameInput(e.target.value);
                   setError("");
                 }}
                 placeholder="Masukkan username"
@@ -168,6 +181,8 @@ export default function LoginPage() {
             <label className="flex items-center cursor-pointer">
               <input
                 type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
                 className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
               />
               <span className="ml-2 text-gray-600">Ingat saya</span>

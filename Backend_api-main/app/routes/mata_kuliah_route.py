@@ -85,7 +85,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from app.core.database import get_db
 from app.models.mata_kuliah_model import MataKuliah
-from app.utils.token_utils import get_current_user, require_super_admin
+from app.utils.token_utils import get_current_user, require_super_admin, require_admin_or_super_admin
 from typing import Optional
 from pydantic import BaseModel, Field
 
@@ -230,9 +230,9 @@ def get_mata_kuliah_by_kode(kode_mk: str, db: Session = Depends(get_db)):
 def create_mata_kuliah(
     payload: MataKuliahCreate, 
     db: Session = Depends(get_db),
-    current_user: dict = Depends(require_super_admin)
+    current_user: dict = Depends(require_admin_or_super_admin)
 ):
-    """Tambah mata kuliah baru (Super Admin only)"""
+    """Tambah mata kuliah baru (Admin or Super Admin)"""
     try:
         existing = db.query(MataKuliah).filter(MataKuliah.kode_mk == payload.kode_mk).first()
         if existing:
@@ -269,9 +269,9 @@ def update_mata_kuliah(
     kode_mk: str, 
     payload: MataKuliahUpdate, 
     db: Session = Depends(get_db),
-    current_user: dict = Depends(require_super_admin)
+    current_user: dict = Depends(require_admin_or_super_admin)
 ):
-    """Edit data mata kuliah (Super Admin only)"""
+    """Edit data mata kuliah (Admin or Super Admin)"""
     try:
         mk = db.query(MataKuliah).filter(MataKuliah.kode_mk == kode_mk).first()
         if not mk:
@@ -308,9 +308,9 @@ def update_mata_kuliah(
 def delete_mata_kuliah(
     kode_mk: str, 
     db: Session = Depends(get_db),
-    current_user: dict = Depends(require_super_admin)
+    current_user: dict = Depends(require_admin_or_super_admin)
 ):
-    """Hapus mata kuliah (Super Admin only)"""
+    """Hapus mata kuliah (Admin or Super Admin)"""
     try:
         mk = db.query(MataKuliah).filter(MataKuliah.kode_mk == kode_mk).first()
         if not mk:

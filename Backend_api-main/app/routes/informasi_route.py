@@ -59,6 +59,51 @@ async def create_informasi(
         db.commit()
         db.refresh(new_informasi)
         
+        # Send Push Notification
+        try:
+            from app.services.notification_service import notification_service
+            from app.models.user_device_model import UserDevice
+            from app.models.user_model import User
+            
+            if not notification_service.active:
+                print("⚠️ Notification service not active, skipping push notification")
+            else:
+                query = db.query(UserDevice).join(User, UserDevice.id_user == User.id_user)
+                
+                # Filter based on target_role
+                if new_informasi.target_role == TargetRoleEnum.mahasiswa:
+                    query = query.filter(User.role == 'mahasiswa')
+                elif new_informasi.target_role == TargetRoleEnum.dosen:
+                    query = query.filter(User.role == 'admin')
+                # If 'all', no filter
+                
+                devices = query.all()
+                target_tokens = [d.fcm_token for d in devices if d.fcm_token]
+                
+                if target_tokens:
+                    print(f"📱 Sending notification to {len(target_tokens)} devices")
+                    # Batch sending (FCM limit is 500 tokens per request)
+                    batch_size = 500
+                    for i in range(0, len(target_tokens), batch_size):
+                        batch = target_tokens[i:i + batch_size]
+                        result = notification_service.send_multicast(
+                            tokens=batch,
+                            title="📢 Informasi Baru",
+                            body=new_informasi.judul,
+                            data={
+                                "type": "informasi",
+                                "id_informasi": str(new_informasi.id),
+                                "action": "open_informasi"
+                            },
+                            db_session=db
+                        )
+                        print(f"✅ Batch {i//batch_size + 1} sent: {result}")
+                else:
+                    print("ℹ️ No devices found for target role")
+        except Exception as e:
+            print(f"❌ Error sending notification: {e}")
+            # Don't fail the whole request if notification fails
+
         return new_informasi
     
     except Exception as e:

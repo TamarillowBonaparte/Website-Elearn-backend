@@ -1,9 +1,10 @@
 import DashboardLayout from "../layouts/dashboardlayout";
+import { usePolling } from "../hooks/usePolling";
 import { useState, useEffect } from "react";
 import { navigationItems } from "../navigation/navigation";
 import { School, Plus, Edit, Trash2, X, AlertCircle } from "lucide-react";
 import axios from "axios";
-
+import { getToken, getUser } from "../utils/auth";
 const API_BASE_URL = "http://localhost:8000";
 
 export default function KelolaKelas() {
@@ -16,7 +17,7 @@ export default function KelolaKelas() {
   const [notification, setNotification] = useState({ show: false, type: '', message: '' });
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
-  
+
   const [formData, setFormData] = useState({
     nama_kelas: '',
     prodi: 'TIF',
@@ -25,17 +26,28 @@ export default function KelolaKelas() {
   });
 
   // Get current user
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-  const isSuperAdmin = currentUser.role === 'super_admin';
+  const currentUser = getUser() || {};
+  const isSuperAdmin = currentUser.role === 'super_admin' || currentUser.role === 'admin';
 
+
+
+  // Initial fetch
   useEffect(() => {
     fetchKelas();
   }, []);
 
+  // Poll for updates every 5 seconds
+
+
   const fetchKelas = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem("token");
+      const token = getToken();
+      if (!token) {
+        showNotification('error', 'Token otentikasi tidak ditemukan. Silakan login ulang.');
+        setLoading(false);
+        return;
+      }
       const response = await axios.get(`${API_BASE_URL}/kelas`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -47,6 +59,9 @@ export default function KelolaKelas() {
       setLoading(false);
     }
   };
+
+  // Poll for updates every 5 seconds
+  usePolling(fetchKelas, 5000);
 
   const showNotification = (type, message) => {
     setNotification({ show: true, type, message });
@@ -100,7 +115,12 @@ export default function KelolaKelas() {
 
     try {
       setLoading(true);
-      const token = localStorage.getItem("token");
+      const token = getToken();
+      if (!token) {
+        showNotification('error', 'Token otentikasi tidak ditemukan. Silakan login ulang.');
+        setLoading(false);
+        return;
+      }
       const payload = {
         nama_kelas: formData.nama_kelas.trim(),
         prodi: formData.prodi,
@@ -144,7 +164,12 @@ export default function KelolaKelas() {
 
     try {
       setLoading(true);
-      const token = localStorage.getItem("token");
+      const token = getToken();
+      if (!token) {
+        showNotification('error', 'Token otentikasi tidak ditemukan. Silakan login ulang.');
+        setLoading(false);
+        return;
+      }
       await axios.delete(`${API_BASE_URL}/kelas/${deleteTarget.id_kelas}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -178,9 +203,8 @@ export default function KelolaKelas() {
       {/* Notification */}
       {notification.show && (
         <div className="fixed top-4 right-4 z-50 animate-slide-in">
-          <div className={`px-6 py-4 rounded-xl shadow-lg flex items-center gap-3 ${
-            notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
-          } text-white`}>
+          <div className={`px-6 py-4 rounded-xl shadow-lg flex items-center gap-3 ${notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
+            } text-white`}>
             {notification.type === 'success' ? '✓' : '✕'} {notification.message}
           </div>
         </div>
@@ -236,20 +260,18 @@ export default function KelolaKelas() {
                 </tr>
               ) : (
                 kelasList.map((kelas, index) => (
-                  <tr 
+                  <tr
                     key={kelas.id_kelas}
-                    className={`border-b hover:bg-gray-50 ${
-                      index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'
-                    }`}
+                    className={`border-b hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'
+                      }`}
                   >
                     <td className="py-3 px-4 font-mono text-sm font-semibold">{kelas.id_kelas}</td>
                     <td className="py-3 px-4 font-medium">{kelas.nama_kelas}</td>
                     <td className="py-3 px-4 text-center">
-                      <span className={`inline-block px-2 py-1 rounded text-xs font-bold ${
-                        kelas.prodi === 'TIF' ? 'bg-blue-100 text-blue-700' :
+                      <span className={`inline-block px-2 py-1 rounded text-xs font-bold ${kelas.prodi === 'TIF' ? 'bg-blue-100 text-blue-700' :
                         kelas.prodi === 'MIF' ? 'bg-purple-100 text-purple-700' :
-                        'bg-orange-100 text-orange-700'
-                      }`}>
+                          'bg-orange-100 text-orange-700'
+                        }`}>
                         {kelas.prodi}
                       </span>
                     </td>
@@ -287,7 +309,7 @@ export default function KelolaKelas() {
 
       {/* Modal Form */}
       {showModal && (
-        <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, margin: 0}} className="w-screen h-screen bg-black/40 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, margin: 0 }} className="w-screen h-screen bg-black/40 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-4 rounded-t-2xl flex items-center justify-between">
               <h2 className="text-xl font-bold flex items-center gap-2">
@@ -310,7 +332,7 @@ export default function KelolaKelas() {
                 <input
                   type="text"
                   value={formData.nama_kelas}
-                  onChange={(e) => setFormData({...formData, nama_kelas: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, nama_kelas: e.target.value })}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
                   placeholder="Contoh: TIF-22-PA"
                   required
@@ -324,7 +346,7 @@ export default function KelolaKelas() {
                 </label>
                 <select
                   value={formData.prodi}
-                  onChange={(e) => setFormData({...formData, prodi: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, prodi: e.target.value })}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
                   required
                 >
@@ -341,7 +363,7 @@ export default function KelolaKelas() {
                 <input
                   type="number"
                   value={formData.tahun_angkatan}
-                  onChange={(e) => setFormData({...formData, tahun_angkatan: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, tahun_angkatan: e.target.value })}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
                   placeholder="Contoh: 2022"
                   min="2000"
@@ -356,7 +378,7 @@ export default function KelolaKelas() {
                 <input
                   type="text"
                   value={formData.golongan}
-                  onChange={(e) => setFormData({...formData, golongan: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, golongan: e.target.value })}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
                   placeholder="Contoh: PA, PB, PC"
                   maxLength={10}
@@ -385,7 +407,7 @@ export default function KelolaKelas() {
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
-        <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, margin: 0}} className="w-screen h-screen bg-black/60 flex items-center justify-center z-[100] backdrop-blur-sm">
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, margin: 0 }} className="w-screen h-screen bg-black/60 flex items-center justify-center z-[100] backdrop-blur-sm">
           <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl">
             <div className="flex items-center gap-3 mb-4">
               <div className="bg-red-100 p-3 rounded-full">

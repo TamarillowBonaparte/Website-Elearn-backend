@@ -34,7 +34,6 @@ const JadwalKuliah = ({ navigation }) => {
     try {
       setIsLoading(true);
 
-      // Get token from SessionManager
       const token = await SessionManager.getToken();
       if (!token) {
         Alert.alert('Error', 'Sesi Anda telah berakhir. Silakan login kembali.');
@@ -42,7 +41,6 @@ const JadwalKuliah = ({ navigation }) => {
         return;
       }
 
-      // Fetch jadwal from API
       const response = await axios.get(`${API_URL}/jadwal-kuliah/mahasiswa/me`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -53,12 +51,10 @@ const JadwalKuliah = ({ navigation }) => {
       console.log('📅 Jadwal data:', response.data);
 
       if (response.data) {
-        // Sort by day and time
         const sorted = response.data.sort((a, b) => {
           const dayCompare = daysOrder.indexOf(a.hari) - daysOrder.indexOf(b.hari);
           if (dayCompare !== 0) return dayCompare;
           
-          // Sort by time if same day
           const timeA = a.jam_mulai || '00:00:00';
           const timeB = b.jam_mulai || '00:00:00';
           return timeA.localeCompare(timeB);
@@ -111,7 +107,6 @@ const JadwalKuliah = ({ navigation }) => {
 
   const formatTime = (timeString) => {
     if (!timeString) return '-';
-    // Format from "HH:MM:SS" to "HH:MM"
     return timeString.substring(0, 5);
   };
 
@@ -132,7 +127,7 @@ const JadwalKuliah = ({ navigation }) => {
             onPress={() => setSelectedDay(null)}
           >
             <Text style={[styles.dayButtonText, !selectedDay && styles.dayButtonTextActive]}>
-              Semua
+              Semua Hari
             </Text>
           </TouchableOpacity>
           {uniqueDays.map((day) => (
@@ -159,43 +154,59 @@ const JadwalKuliah = ({ navigation }) => {
   const renderJadwalCard = (jadwal) => {
     return (
       <View key={jadwal.id_jadwal} style={styles.jadwalCard}>
-        <View style={styles.jadwalHeader}>
-          <View style={styles.jadwalHeaderLeft}>
-            <Icon name="book-outline" size={20} color={COLORS.purple600} />
-            <Text style={styles.matkulName}>{jadwal.nama_mk || '-'}</Text>
-          </View>
-          <View style={styles.dayBadge}>
-            <Text style={styles.dayBadgeText}>{jadwal.hari}</Text>
-          </View>
-        </View>
-
-        <View style={styles.jadwalDetails}>
-          <View style={styles.detailRow}>
-            <Icon name="person-outline" size={16} color={COLORS.gray500} />
-            <Text style={styles.detailLabel}>Dosen:</Text>
-            <Text style={styles.detailValue}>{jadwal.nama_dosen || '-'}</Text>
-          </View>
-
-          <View style={styles.detailRow}>
-            <Icon name="time-outline" size={16} color={COLORS.gray500} />
-            <Text style={styles.detailLabel}>Waktu:</Text>
-            <Text style={styles.detailValue}>
-              {formatTime(jadwal.jam_mulai)} - {formatTime(jadwal.jam_selesai)}
-            </Text>
+        <LinearGradient
+          colors={['#ffffff', '#f8fbff']}
+          style={styles.cardGradient}
+        >
+          <View style={styles.jadwalHeader}>
+            <View style={styles.jadwalHeaderLeft}>
+              <View style={styles.iconContainer}>
+                <Icon name="book" size={20} color="#ffffff" />
+              </View>
+              <View style={styles.headerTextContainer}>
+                <Text style={styles.matkulName}>{jadwal.nama_mk || '-'}</Text>
+                <Text style={styles.kodeMk}>{jadwal.kode_mk || '-'}</Text>
+              </View>
+            </View>
+            <View style={styles.dayBadge}>
+              <Text style={styles.dayBadgeText}>{jadwal.hari}</Text>
+            </View>
           </View>
 
-          <View style={styles.detailRow}>
-            <Icon name="location-outline" size={16} color={COLORS.gray500} />
-            <Text style={styles.detailLabel}>Ruangan:</Text>
-            <Text style={styles.detailValue}>{jadwal.ruangan || '-'}</Text>
-          </View>
+          <View style={styles.jadwalDetails}>
+            <View style={styles.detailRow}>
+              <View style={styles.detailIconContainer}>
+                <Icon name="person" size={16} color="#2563eb" />
+              </View>
+              <View style={styles.detailContent}>
+                <Text style={styles.detailLabel}>Dosen</Text>
+                <Text style={styles.detailValue}>{jadwal.nama_dosen || '-'}</Text>
+              </View>
+            </View>
 
-          <View style={styles.detailRow}>
-            <Icon name="code-outline" size={16} color={COLORS.gray500} />
-            <Text style={styles.detailLabel}>Kode MK:</Text>
-            <Text style={styles.detailValue}>{jadwal.kode_mk || '-'}</Text>
+            <View style={styles.detailRow}>
+              <View style={styles.detailIconContainer}>
+                <Icon name="time" size={16} color="#2563eb" />
+              </View>
+              <View style={styles.detailContent}>
+                <Text style={styles.detailLabel}>Waktu</Text>
+                <Text style={styles.detailValue}>
+                  {formatTime(jadwal.jam_mulai)} - {formatTime(jadwal.jam_selesai)}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.detailRow}>
+              <View style={styles.detailIconContainer}>
+                <Icon name="location" size={16} color="#2563eb" />
+              </View>
+              <View style={styles.detailContent}>
+                <Text style={styles.detailLabel}>Ruangan</Text>
+                <Text style={styles.detailValue}>{jadwal.ruangan || '-'}</Text>
+              </View>
+            </View>
           </View>
-        </View>
+        </LinearGradient>
       </View>
     );
   };
@@ -206,15 +217,17 @@ const JadwalKuliah = ({ navigation }) => {
       if (jadwalDay.length === 0) {
         return (
           <View style={styles.emptyContainer}>
-            <Icon name="calendar-outline" size={64} color={COLORS.gray300} />
-            <Text style={styles.emptyText}>Tidak ada jadwal pada hari {selectedDay}</Text>
+            <View style={styles.emptyIconContainer}>
+              <Icon name="calendar-outline" size={64} color="#93c5fd" />
+            </View>
+            <Text style={styles.emptyText}>Tidak ada jadwal</Text>
+            <Text style={styles.emptySubText}>pada hari {selectedDay}</Text>
           </View>
         );
       }
       return jadwalDay.map((jadwal) => renderJadwalCard(jadwal));
     }
 
-    // Group by day
     const groupedJadwal = daysOrder.map((day) => ({
       day,
       jadwal: getJadwalByDay(day),
@@ -223,7 +236,9 @@ const JadwalKuliah = ({ navigation }) => {
     if (groupedJadwal.length === 0) {
       return (
         <View style={styles.emptyContainer}>
-          <Icon name="calendar-outline" size={64} color={COLORS.gray300} />
+          <View style={styles.emptyIconContainer}>
+            <Icon name="calendar-outline" size={64} color="#93c5fd" />
+          </View>
           <Text style={styles.emptyText}>Belum ada jadwal kuliah</Text>
           <Text style={styles.emptySubText}>
             Jadwal kuliah Anda akan muncul di sini
@@ -237,6 +252,7 @@ const JadwalKuliah = ({ navigation }) => {
         <View style={styles.daySectionHeader}>
           <Text style={styles.daySectionTitle}>{group.day}</Text>
           <View style={styles.daySectionBadge}>
+            <Icon name="layers" size={12} color="#2563eb" style={{ marginRight: 4 }} />
             <Text style={styles.daySectionBadgeText}>{group.jadwal.length} Kelas</Text>
           </View>
         </View>
@@ -247,13 +263,18 @@ const JadwalKuliah = ({ navigation }) => {
 
   if (isLoading) {
     return (
-      <LinearGradient colors={[COLORS.purple50, COLORS.bgPurple]} style={styles.container}>
+      <LinearGradient colors={['#dbeafe', '#eff6ff', '#ffffff']} style={styles.container}>
         <SafeAreaView style={styles.safeArea}>
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>Jadwal Kuliah</Text>
+            <View style={styles.headerContent}>
+              <View style={styles.headerIconContainer}>
+                <Icon name="calendar" size={28} color="#ffffff" />
+              </View>
+              <Text style={styles.headerTitle}>Jadwal Kuliah</Text>
+            </View>
           </View>
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={COLORS.purple600} />
+            <ActivityIndicator size="large" color="#2563eb" />
             <Text style={styles.loadingText}>Memuat jadwal kuliah...</Text>
           </View>
         </SafeAreaView>
@@ -262,16 +283,21 @@ const JadwalKuliah = ({ navigation }) => {
   }
 
   return (
-    <LinearGradient colors={[COLORS.purple50, COLORS.bgPurple]} style={styles.container}>
+    <LinearGradient colors={['#dbeafe', '#eff6ff', '#ffffff']} style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerContent}>
-            <Icon name="calendar" size={28} color={COLORS.purple600} />
-            <Text style={styles.headerTitle}>Jadwal Kuliah</Text>
+            <View style={styles.headerIconContainer}>
+              <Icon name="calendar" size={28} color="#ffffff" />
+            </View>
+            <View>
+              <Text style={styles.headerTitle}>Jadwal Kuliah</Text>
+              <Text style={styles.headerSubtitle}>Kelola jadwal perkuliahan Anda</Text>
+            </View>
           </View>
           <TouchableOpacity onPress={onRefresh} style={styles.refreshButton}>
-            <Icon name="refresh" size={24} color={COLORS.purple600} />
+            <Icon name="refresh" size={24} color="#ffffff" />
           </TouchableOpacity>
         </View>
 
@@ -287,8 +313,8 @@ const JadwalKuliah = ({ navigation }) => {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={[COLORS.purple600]}
-              tintColor={COLORS.purple600}
+              colors={['#2563eb']}
+              tintColor="#2563eb"
             />
           }
         >
@@ -314,48 +340,80 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: COLORS.white,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.gray200,
+    paddingVertical: 20,
+    backgroundColor: '#2563eb',
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
   },
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
+  headerIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: COLORS.gray800,
+    color: '#ffffff',
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginTop: 2,
   },
   refreshButton: {
-    padding: 8,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   daySelectorContainer: {
-    backgroundColor: COLORS.white,
-    paddingVertical: 12,
+    backgroundColor: '#ffffff',
+    paddingVertical: 16,
     paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.gray200,
+    marginTop: 8,
+    marginHorizontal: 16,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   dayButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: COLORS.gray100,
-    marginRight: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 24,
+    backgroundColor: '#f1f5f9',
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
   dayButtonActive: {
-    backgroundColor: COLORS.purple600,
+    backgroundColor: '#2563eb',
+    borderColor: '#1e40af',
   },
   dayButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.gray600,
+    color: '#64748b',
   },
   dayButtonTextActive: {
-    color: COLORS.white,
+    color: '#ffffff',
   },
   scrollView: {
     flex: 1,
@@ -365,107 +423,156 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   daySection: {
-    marginBottom: 24,
+    marginBottom: 28,
   },
   daySectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   daySectionTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: COLORS.gray800,
+    color: '#1e293b',
   },
   daySectionBadge: {
-    backgroundColor: COLORS.purple100,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#dbeafe',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
   },
   daySectionBadgeText: {
     fontSize: 12,
     fontWeight: '600',
-    color: COLORS.purple600,
+    color: '#2563eb',
   },
   jadwalCard: {
-    backgroundColor: COLORS.white,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    borderRadius: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+    overflow: 'hidden',
+  },
+  cardGradient: {
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#e0f2fe',
+    borderRadius: 20,
   },
   jadwalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-    paddingBottom: 12,
+    alignItems: 'flex-start',
+    marginBottom: 20,
+    paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.gray100,
+    borderBottomColor: '#e0f2fe',
   },
   jadwalHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
+    flex: 1,
+  },
+  iconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#2563eb',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#2563eb',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  headerTextContainer: {
     flex: 1,
   },
   matkulName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: COLORS.gray800,
-    flex: 1,
+    color: '#1e293b',
+    marginBottom: 2,
+  },
+  kodeMk: {
+    fontSize: 12,
+    color: '#64748b',
+    fontWeight: '500',
   },
   dayBadge: {
-    backgroundColor: COLORS.blue50,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    backgroundColor: '#dbeafe',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
   },
   dayBadgeText: {
     fontSize: 12,
     fontWeight: '600',
-    color: COLORS.blue600,
+    color: '#1e40af',
   },
   jadwalDetails: {
-    gap: 8,
+    gap: 14,
   },
   detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
+  },
+  detailIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#eff6ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  detailContent: {
+    flex: 1,
   },
   detailLabel: {
-    fontSize: 14,
-    color: COLORS.gray500,
+    fontSize: 12,
+    color: '#64748b',
     fontWeight: '500',
-    width: 70,
+    marginBottom: 2,
   },
   detailValue: {
     fontSize: 14,
-    color: COLORS.gray800,
-    fontWeight: '400',
-    flex: 1,
+    color: '#1e293b',
+    fontWeight: '600',
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 60,
+    paddingVertical: 80,
+  },
+  emptyIconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#eff6ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   emptyText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.gray500,
-    marginTop: 16,
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#475569',
+    marginTop: 4,
   },
   emptySubText: {
     fontSize: 14,
-    color: COLORS.gray400,
+    color: '#94a3b8',
     marginTop: 8,
     textAlign: 'center',
   },
@@ -476,8 +583,9 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: COLORS.gray500,
-    marginTop: 12,
+    color: '#64748b',
+    marginTop: 16,
+    fontWeight: '500',
   },
 });
 

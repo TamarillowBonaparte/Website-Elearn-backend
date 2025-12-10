@@ -12,7 +12,7 @@ from app.schemas.kelas_mata_kuliah_schema import (
     KelasMatKuliahResponse,
     KelasMatKuliahDetail
 )
-from app.utils.token_utils import get_current_user, require_super_admin
+from app.utils.token_utils import get_current_user, require_super_admin, require_admin_or_super_admin
 
 router = APIRouter(prefix="/kelas-mata-kuliah", tags=["Kelas Mata Kuliah"])
 
@@ -183,10 +183,10 @@ def get_kelas_mk_by_id(
 @router.post("/", response_model=KelasMatKuliahResponse, status_code=status.HTTP_201_CREATED)
 def create_kelas_mk(
     kelas_mk: KelasMatKuliahCreate,
-    current_user: dict = Depends(require_super_admin),
+    current_user: dict = Depends(require_admin_or_super_admin),
     db: Session = Depends(get_db)
 ):
-    """Create new kelas mata kuliah (super_admin only)"""
+    """Create new kelas mata kuliah (admin or super_admin)"""
     # Validate mata_kuliah exists
     mata_kuliah = db.query(MataKuliah).filter(MataKuliah.kode_mk == kelas_mk.kode_mk).first()
     if not mata_kuliah:
@@ -236,10 +236,10 @@ def create_kelas_mk(
 def update_kelas_mk(
     id_kelas_mk: int,
     kelas_mk_update: KelasMatKuliahUpdate,
-    current_user: dict = Depends(require_super_admin),
+    current_user: dict = Depends(require_admin_or_super_admin),
     db: Session = Depends(get_db)
 ):
-    """Update kelas mata kuliah (super_admin only)"""
+    """Update kelas mata kuliah (admin or super_admin)"""
     kelas_mk = db.query(KelasMatKuliah).filter(KelasMatKuliah.id_kelas_mk == id_kelas_mk).first()
     
     if not kelas_mk:
@@ -260,10 +260,10 @@ def update_kelas_mk(
 @router.delete("/{id_kelas_mk}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_kelas_mk(
     id_kelas_mk: int,
-    current_user: dict = Depends(require_super_admin),
+    current_user: dict = Depends(require_admin_or_super_admin),
     db: Session = Depends(get_db)
 ):
-    """Delete kelas mata kuliah (super_admin only)"""
+    """Delete kelas mata kuliah (admin or super_admin)"""
     kelas_mk = db.query(KelasMatKuliah).filter(KelasMatKuliah.id_kelas_mk == id_kelas_mk).first()
     
     if not kelas_mk:

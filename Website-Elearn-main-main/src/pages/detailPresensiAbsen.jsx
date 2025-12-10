@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { navigationItems } from "../navigation/navigation";
 import { ArrowLeft, UserCheck, Users, BookOpen, Calendar, Download, CheckCircle, XCircle, Clock, AlertCircle, Edit2, Save, X } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
+import { getToken, getUser } from "../utils/auth";
 
 export default function DetailPresensiAbsen() {
   const [activeNav, setActiveNav] = useState("presensi");
@@ -30,7 +31,7 @@ export default function DetailPresensiAbsen() {
   });
   
   // Get current user role
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const currentUser = getUser() || {};
   const isAdminOrSuperAdmin = currentUser.role === 'admin' || currentUser.role === 'super_admin';
 
   // Load data dari backend
@@ -113,7 +114,11 @@ export default function DetailPresensiAbsen() {
   
   const handleSaveEditStatus = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getToken();
+      if (!token) {
+        showNotification('error', 'Token otentikasi tidak ditemukan. Silakan login ulang.');
+        return;
+      }
       const response = await fetch(`http://localhost:8000/presensi/admin/update-status/${editingPresensi.id_presensi}`, {
         method: 'PUT',
         headers: {

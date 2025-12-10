@@ -13,7 +13,7 @@ from app.schemas.jadwal_kuliah_schema import (
     JadwalKuliahUpdate,
     JadwalKuliahResponse
 )
-from app.utils.token_utils import get_current_user, require_super_admin
+from app.utils.token_utils import get_current_user, require_super_admin, require_admin_or_super_admin
 
 router = APIRouter(prefix="/jadwal-kuliah", tags=["Jadwal Kuliah"])
 
@@ -241,10 +241,10 @@ def get_jadwal_by_id(
 @router.post("/", response_model=JadwalKuliahResponse, status_code=status.HTTP_201_CREATED)
 def create_jadwal(
     jadwal: JadwalKuliahCreate,
-    current_user: dict = Depends(require_super_admin),
+    current_user: dict = Depends(require_admin_or_super_admin),
     db: Session = Depends(get_db)
 ):
-    """Create new jadwal kuliah (super_admin only)"""
+    """Create new jadwal kuliah (admin or super_admin)"""
     # Validate kelas_mata_kuliah exists
     kelas_mk = db.query(KelasMatKuliah).filter(
         KelasMatKuliah.id_kelas_mk == jadwal.id_kelas_mk
@@ -279,10 +279,10 @@ def create_jadwal(
 def update_jadwal(
     id_jadwal: int,
     jadwal_update: JadwalKuliahUpdate,
-    current_user: dict = Depends(require_super_admin),
+    current_user: dict = Depends(require_admin_or_super_admin),
     db: Session = Depends(get_db)
 ):
-    """Update jadwal kuliah (super_admin only)"""
+    """Update jadwal kuliah (admin or super_admin)"""
     jadwal = db.query(JadwalKuliah).filter(JadwalKuliah.id_jadwal == id_jadwal).first()
     
     if not jadwal:
@@ -303,10 +303,10 @@ def update_jadwal(
 @router.delete("/{id_jadwal}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_jadwal(
     id_jadwal: int,
-    current_user: dict = Depends(require_super_admin),
+    current_user: dict = Depends(require_admin_or_super_admin),
     db: Session = Depends(get_db)
 ):
-    """Delete jadwal kuliah (super_admin only)"""
+    """Delete jadwal kuliah (admin or super_admin)"""
     jadwal = db.query(JadwalKuliah).filter(JadwalKuliah.id_jadwal == id_jadwal).first()
     
     if not jadwal:

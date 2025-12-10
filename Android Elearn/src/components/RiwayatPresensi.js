@@ -8,12 +8,16 @@ import {
   SafeAreaView,
   ActivityIndicator,
   RefreshControl,
+  Dimensions,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { PieChart, ProgressChart } from 'react-native-chart-kit';
 import { COLORS, GRADIENTS } from '../constants/colors';
 import { API_URL } from '../config/api';
 import SessionManager from '../utils/SessionManager';
+
+const screenWidth = Dimensions.get('window').width;
 
 export default function PresensiScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
@@ -179,6 +183,133 @@ export default function PresensiScreen({ navigation }) {
               </LinearGradient>
             </View>
           </View>
+
+          {/* Grafik Tingkat Disiplin */}
+          {!loading && presensiData.length > 0 && (
+            <View style={styles.chartCard}>
+              <Text style={styles.chartTitle}>Tingkat Disiplin Mahasiswa</Text>
+              
+              {/* Progress Bar Chart */}
+              <View style={styles.chartContainer}>
+                <Text style={styles.chartSubtitle}>Persentase Kehadiran</Text>
+                <ProgressChart
+                  data={{
+                    labels: ['Hadir', 'Izin', 'Alfa'],
+                    data: [
+                      presensiData.length > 0 ? stats.hadir / presensiData.length : 0,
+                      presensiData.length > 0 ? stats.izin / presensiData.length : 0,
+                      presensiData.length > 0 ? stats.alfa / presensiData.length : 0,
+                    ],
+                    colors: [
+                      COLORS.green600,
+                      COLORS.yellow600,
+                      COLORS.red600,
+                    ]
+                  }}
+                  width={screenWidth - 80}
+                  height={200}
+                  strokeWidth={16}
+                  radius={28}
+                  chartConfig={{
+                    backgroundColor: COLORS.white,
+                    backgroundGradientFrom: COLORS.white,
+                    backgroundGradientTo: COLORS.white,
+                    color: (opacity = 1, index) => {
+                      const colors = [COLORS.green600, COLORS.yellow600, COLORS.red600];
+                      return colors[index] || COLORS.green600;
+                    },
+                    labelColor: (opacity = 1) => COLORS.gray700,
+                    strokeWidth: 2,
+                    style: {
+                      borderRadius: 16,
+                    },
+                  }}
+                  hideLegend={false}
+                  style={styles.chart}
+                />
+              </View>
+
+              {/* Pie Chart */}
+              <View style={styles.chartContainer}>
+                <Text style={styles.chartSubtitle}>Distribusi Presensi</Text>
+                <PieChart
+                  data={[
+                    {
+                      name: 'Hadir',
+                      population: stats.hadir,
+                      color: COLORS.green600,
+                      legendFontColor: COLORS.gray700,
+                      legendFontSize: 13,
+                    },
+                    {
+                      name: 'Izin',
+                      population: stats.izin,
+                      color: COLORS.yellow600,
+                      legendFontColor: COLORS.gray700,
+                      legendFontSize: 13,
+                    },
+                    {
+                      name: 'Alfa',
+                      population: stats.alfa,
+                      color: COLORS.red600,
+                      legendFontColor: COLORS.gray700,
+                      legendFontSize: 13,
+                    },
+                  ]}
+                  width={screenWidth - 80}
+                  height={200}
+                  chartConfig={{
+                    color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                  }}
+                  accessor="population"
+                  backgroundColor="transparent"
+                  paddingLeft="15"
+                  absolute
+                  style={styles.chart}
+                />
+              </View>
+
+              {/* Indikator Disiplin */}
+              <View style={styles.disciplineIndicator}>
+                <Text style={styles.disciplineLabel}>Indikator Kedisiplinan</Text>
+                <View style={styles.disciplineBar}>
+                  <View 
+                    style={[
+                      styles.disciplineProgress,
+                      {
+                        width: `${presensiData.length > 0 ? (stats.hadir / presensiData.length) * 100 : 0}%`,
+                        backgroundColor: 
+                          (stats.hadir / presensiData.length) >= 0.8 ? COLORS.green600 :
+                          (stats.hadir / presensiData.length) >= 0.6 ? COLORS.yellow600 :
+                          COLORS.red600
+                      }
+                    ]}
+                  />
+                </View>
+                <View style={styles.disciplineInfo}>
+                  <Text style={[
+                    styles.disciplinePercentage,
+                    {
+                      color: 
+                        (stats.hadir / presensiData.length) >= 0.8 ? COLORS.green700 :
+                        (stats.hadir / presensiData.length) >= 0.6 ? COLORS.yellow700 :
+                        COLORS.red700
+                    }
+                  ]}>
+                    {presensiData.length > 0 ? ((stats.hadir / presensiData.length) * 100).toFixed(1) : 0}%
+                  </Text>
+                  <Text style={styles.disciplineStatus}>
+                    {
+                      (stats.hadir / presensiData.length) >= 0.8 ? '🌟 Sangat Baik' :
+                      (stats.hadir / presensiData.length) >= 0.6 ? '⚠️ Cukup' :
+                      '❌ Perlu Ditingkatkan'
+                    }
+                  </Text>
+                </View>
+              </View>
+            </View>
+          )}
+
 
           {/* History */}
           <Text style={styles.historyTitle}>Riwayat Presensi</Text>
@@ -418,5 +549,71 @@ const styles = StyleSheet.create({
   },
   bottomSpacing: {
     height: 100,
+  },
+  chartCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    padding: 24,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: COLORS.green100,
+    shadowColor: COLORS.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  chartTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: COLORS.gray800,
+    marginBottom: 20,
+  },
+  chartContainer: {
+    marginBottom: 24,
+    alignItems: 'center',
+  },
+  chartSubtitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.gray700,
+    marginBottom: 12,
+  },
+  chart: {
+    borderRadius: 16,
+  },
+  disciplineIndicator: {
+    marginTop: 8,
+  },
+  disciplineLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.gray700,
+    marginBottom: 12,
+  },
+  disciplineBar: {
+    height: 24,
+    backgroundColor: COLORS.gray200,
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginBottom: 12,
+  },
+  disciplineProgress: {
+    height: '100%',
+    borderRadius: 12,
+  },
+  disciplineInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  disciplinePercentage: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  disciplineStatus: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.gray700,
   },
 });

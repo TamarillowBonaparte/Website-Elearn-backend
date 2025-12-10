@@ -1,15 +1,17 @@
 // src/pages/mingguMateri.jsx
 import DashboardLayout from "../layouts/dashboardlayout";
+import { usePolling } from "../hooks/usePolling";
 import { useState, useEffect } from "react";
 import { navigationItems } from "../navigation/navigation";
 import { useParams, useNavigate } from "react-router-dom";
-import { 
-  ArrowLeft, Plus, Edit2, Trash2, FileText, Calendar, 
-  X, Upload, CheckCircle, AlertCircle, BarChart3, Users, 
+import {
+  ArrowLeft, Plus, Edit2, Trash2, FileText, Calendar,
+  X, Upload, CheckCircle, AlertCircle, BarChart3, Users,
   TrendingUp, Clock, Eye, Award
 } from "lucide-react";
 import axios from "axios";
 import { apiGet } from "../utils/apiUtils";
+import { getToken } from "../utils/auth";
 
 const API_BASE_URL = "http://localhost:8000";
 
@@ -47,16 +49,23 @@ export default function MingguMateri() {
     loadData();
   }, [id_kelas_mk]);
 
+
+
   useEffect(() => {
     if (kelasMKInfo) {
       fetchMateri();
     }
   }, [kelasMKInfo, minggu]);
 
+  // Poll for updates every 5 seconds
+  usePolling(() => {
+    if (kelasMKInfo) fetchMateri();
+  }, 5000);
+
   // Fetch kelas mata kuliah info
   const fetchKelasMKInfo = async () => {
     try {
-      const token = localStorage.getItem("token");
+      const token = getToken();
       const response = await axios.get(`${API_BASE_URL}/kelas-mata-kuliah/${id_kelas_mk}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -70,11 +79,11 @@ export default function MingguMateri() {
   const fetchMateri = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem("token");
-      
+      const token = getToken();
+
       // Get kode_mk and id_kelas from kelasMKInfo first
       if (!kelasMKInfo) return;
-      
+
       const { kode_mk, id_kelas } = kelasMKInfo;
       const response = await axios.get(`${API_BASE_URL}/materi?kode_mk=${kode_mk}&id_kelas=${id_kelas}&minggu=${minggu}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -161,19 +170,19 @@ export default function MingguMateri() {
 
     try {
       setSaving(true);
-      const token = localStorage.getItem("token");
+      const token = getToken();
       const formDataToSend = new FormData();
 
       if (modalMode === "add") {
         const { kode_mk, id_kelas, id_dosen } = kelasMKInfo;
-        
+
         formDataToSend.append("kode_mk", kode_mk);
         formDataToSend.append("id_kelas", id_kelas);
         formDataToSend.append("minggu", minggu); // Use minggu from URL params
         formDataToSend.append("judul", formData.judul);
         formDataToSend.append("deskripsi", formData.deskripsi || "");
         formDataToSend.append("uploaded_by", id_dosen); // Track who uploaded
-        
+
         if (formData.file_pdf) {
           formDataToSend.append("file_pdf", formData.file_pdf);
         }
@@ -191,7 +200,7 @@ export default function MingguMateri() {
         if (formData.judul) formDataToSend.append("judul", formData.judul);
         if (formData.deskripsi) formDataToSend.append("deskripsi", formData.deskripsi);
         formDataToSend.append("minggu", minggu); // Use minggu from URL params
-        
+
         if (formData.file_pdf) {
           formDataToSend.append("file_pdf", formData.file_pdf);
         }
@@ -255,7 +264,7 @@ export default function MingguMateri() {
 
   const handleDeleteConfirm = async () => {
     try {
-      const token = localStorage.getItem("token");
+      const token = getToken();
       await axios.delete(`${API_BASE_URL}/materi/${deleteTarget.id_materi}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -286,11 +295,10 @@ export default function MingguMateri() {
       {/* Notification */}
       {notification.show && (
         <div className="fixed top-4 right-4 z-50 animate-slide-in">
-          <div className={`flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg ${
-            notification.type === 'success' 
-              ? 'bg-green-500 text-white' 
-              : 'bg-red-500 text-white'
-          }`}>
+          <div className={`flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg ${notification.type === 'success'
+            ? 'bg-green-500 text-white'
+            : 'bg-red-500 text-white'
+            }`}>
             {notification.type === 'success' ? (
               <CheckCircle className="h-5 w-5" />
             ) : (
@@ -419,7 +427,7 @@ export default function MingguMateri() {
 
       {/* Modal Form */}
       {showModal && (
-        <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, margin: 0}} className="w-screen h-screen bg-black/60 flex items-center justify-center z-[100] p-4 backdrop-blur-sm">
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, margin: 0 }} className="w-screen h-screen bg-black/60 flex items-center justify-center z-[100] p-4 backdrop-blur-sm">
           <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl transform transition-all">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-bold text-gray-800">
@@ -518,7 +526,7 @@ export default function MingguMateri() {
 
       {/* Modal Skor Materi */}
       {showSkorModal && (
-        <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, margin: 0}} className="w-screen h-screen bg-black/60 flex items-center justify-center z-[100] p-4 backdrop-blur-sm overflow-y-auto">
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, margin: 0 }} className="w-screen h-screen bg-black/60 flex items-center justify-center z-[100] p-4 backdrop-blur-sm overflow-y-auto">
           <div className="bg-white rounded-2xl p-6 max-w-5xl w-full shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6 sticky top-0 bg-white pb-4 border-b">
               <h3 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
@@ -625,29 +633,26 @@ export default function MingguMateri() {
                               <td className="px-4 py-3 text-sm text-gray-700 font-mono">{skor.nim}</td>
                               <td className="px-4 py-3 text-sm text-gray-800 font-medium">{skor.nama_mahasiswa}</td>
                               <td className="px-4 py-3 text-center">
-                                <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-bold ${
-                                  skor.skor_perhatian >= 80 ? 'bg-green-100 text-green-700' :
+                                <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-bold ${skor.skor_perhatian >= 80 ? 'bg-green-100 text-green-700' :
                                   skor.skor_perhatian >= 60 ? 'bg-yellow-100 text-yellow-700' :
-                                  'bg-red-100 text-red-700'
-                                }`}>
+                                    'bg-red-100 text-red-700'
+                                  }`}>
                                   {skor.skor_perhatian}
                                 </span>
                               </td>
                               <td className="px-4 py-3 text-center text-sm text-gray-700">{formatWaktu(skor.waktu_belajar)}</td>
                               <td className="px-4 py-3 text-center text-sm text-gray-700">{formatWaktu(skor.waktu_fokus)}</td>
                               <td className="px-4 py-3 text-center">
-                                <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${
-                                  skor.jumlah_gangguan === 0 ? 'bg-green-100 text-green-700' :
+                                <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${skor.jumlah_gangguan === 0 ? 'bg-green-100 text-green-700' :
                                   skor.jumlah_gangguan <= 3 ? 'bg-yellow-100 text-yellow-700' :
-                                  'bg-red-100 text-red-700'
-                                }`}>
+                                    'bg-red-100 text-red-700'
+                                  }`}>
                                   {skor.jumlah_gangguan}x
                                 </span>
                               </td>
                               <td className="px-4 py-3 text-center">
-                                <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
-                                  skor.tracking_mode === 'camera' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'
-                                }`}>
+                                <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${skor.tracking_mode === 'camera' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'
+                                  }`}>
                                   {skor.tracking_mode === 'camera' ? <Eye className="h-3 w-3" /> : null}
                                   {skor.tracking_mode}
                                 </span>
@@ -684,7 +689,7 @@ export default function MingguMateri() {
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
-        <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, margin: 0}} className="w-screen h-screen bg-black/60 flex items-center justify-center z-[100] backdrop-blur-sm">
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, margin: 0 }} className="w-screen h-screen bg-black/60 flex items-center justify-center z-[100] backdrop-blur-sm">
           <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl">
             <div className="flex items-center gap-3 mb-4">
               <div className="bg-red-100 p-3 rounded-full">

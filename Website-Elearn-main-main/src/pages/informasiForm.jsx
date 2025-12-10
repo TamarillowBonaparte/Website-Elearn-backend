@@ -8,6 +8,7 @@ import {
   uploadInformasiImage,
   API_BASE_URL
 } from '../utils/apiUtils';
+import { getUser } from '../utils/auth';
 import { navigationItems } from '../navigation/navigation';
 import DashboardLayout from '../layouts/dashboardlayout';
 
@@ -23,8 +24,8 @@ const InformasiForm = () => {
   const [notification, setNotification] = useState({ show: false, type: '', message: '' });
 
   // Get current user and check role
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-  const isSuperAdmin = currentUser.role === 'super_admin';
+  const currentUser = getUser() || {};
+  const isSuperAdmin = currentUser.role === 'super_admin' || currentUser.role === 'admin';
 
   // Form data
   const [formData, setFormData] = useState({

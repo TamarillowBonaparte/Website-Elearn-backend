@@ -82,11 +82,14 @@ from app.routes import (
     gaze_detection_route,
     informasi_route,
     jadwal_kuliah_route,
-    skor_materi_route
+    informasi_route,
+    jadwal_kuliah_route,
+    skor_materi_route,
+    notification_route
 )
 
 # Import models (no relationships needed)
-from app.models import mata_kuliah_model, kelas_model, mahasiswa_model, dosen_model, presensi_model, kelas_mata_kuliah_model, face_registration_model, informasi_model, jadwal_kuliah_model, skor_materi_model
+from app.models import mata_kuliah_model, kelas_model, mahasiswa_model, dosen_model, presensi_model, kelas_mata_kuliah_model, face_registration_model, informasi_model, jadwal_kuliah_model, skor_materi_model, user_device_model
 
 app = FastAPI(title="E-Learning API", version="1.0.0")
 
@@ -123,6 +126,7 @@ app.include_router(gaze_detection_route.router)
 app.include_router(informasi_route.router)
 app.include_router(jadwal_kuliah_route.router)
 app.include_router(skor_materi_route.router)
+app.include_router(notification_route.router)
 
 # Mount static files untuk uploads
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")

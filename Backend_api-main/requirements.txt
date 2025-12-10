@@ -17,3 +17,6 @@ mtcnn
 
 # Eye Tracking Dependencies (Gaze Detection)
 mediapipe>=0.10.0
+
+# Firebase Cloud Messaging
+firebase-admin>=6.0.0

@@ -1,9 +1,25 @@
-import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Text, ActivityIndicator } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import React, {
+  useEffect,
+  useState,
+  useRef
+} from 'react';
+import {
+  View,
+  StyleSheet,
+  Text,
+  ActivityIndicator
+} from 'react-native';
+import {
+  NavigationContainer
+} from '@react-navigation/native';
+import {
+  createNativeStackNavigator
+} from '@react-navigation/native-stack';
 import 'react-native-reanimated';
 import SessionManager from '../utils/SessionManager';
+import {
+  notificationService
+} from '../services/NotificationService';
 
 // Import screens
 import LoginScreen from '../components/Login';
@@ -73,8 +89,17 @@ const NotificationsScreen = () => (
 );
 
 // Camera tanpa bottom navigation
-const CameraScreenNoNav = ({ navigation, route }) => (
-  <CameraScreen navigation={navigation} route={route} />
+const CameraScreenNoNav = ({
+  navigation,
+  route
+}) => ( <
+  CameraScreen navigation = {
+    navigation
+  }
+  route = {
+    route
+  }
+  />
 );
 
 // AuthLoading Screen - untuk cek session
@@ -86,67 +111,103 @@ const AuthLoadingScreen = () => (
 );
 
 const App = () => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const navigationRef = useRef(null);
 
-  // Cek session saat aplikasi pertama kali dibuka
-  useEffect(() => {
-    checkSession();
-  }, []);
+    // Cek session saat aplikasi pertama kali dibuka
+    useEffect(() => {
+      checkSession();
 
-  const checkSession = async () => {
-    try {
-      console.log('🔍 Checking session...');
-      
-      // Gunakan SessionManager untuk cek login status
-      const isLoggedIn = await SessionManager.isLoggedIn();
-      
-      if (isLoggedIn) {
-        const { user } = await SessionManager.getSession();
-        console.log('✅ Session found - User logged in:', user?.username || 'Unknown');
-        setIsLoggedIn(true);
-      } else {
-        console.log('❌ No session found - User not logged in');
+      // Setup Notifications
+      const setupNotifications = async () => {
+        const hasPermission = await notificationService.requestUserPermission();
+        if (hasPermission) {
+          // Wait for navigation to be ready
+          setTimeout(() => {
+            if (navigationRef.current) {
+              notificationService.listen(navigationRef.current);
+              console.log('✅ Notification listener setup with navigation');
+            }
+          }, 1000);
+          await notificationService.syncTokenWithBackend();
+        }
+      };
+      setupNotifications();
+
+      return () => {
+        notificationService.unListen();
+      };
+    }, []);
+
+    const checkSession = async () => {
+      try {
+        console.log('🔍 Checking session...');
+
+        // Gunakan SessionManager untuk cek login status
+        const isLoggedIn = await SessionManager.isLoggedIn();
+
+        if (isLoggedIn) {
+          const {
+            user
+          } = await SessionManager.getSession();
+          console.log('✅ Session found - User logged in:', user?.username || 'Unknown');
+          setIsLoggedIn(true);
+        } else {
+          console.log('❌ No session found - User not logged in');
+          setIsLoggedIn(false);
+        }
+      } catch (error) {
+        console.error('❌ Error checking session:', error);
         setIsLoggedIn(false);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error('❌ Error checking session:', error);
-      setIsLoggedIn(false);
-    } finally {
-      setIsLoading(false);
+    };
+
+    if (isLoading) {
+      return <AuthLoadingScreen / > ;
     }
-  };
 
-  if (isLoading) {
-    return <AuthLoadingScreen />;
-  }
-
-  return (
-    <NavigationContainer>
-      <Stack.Navigator 
-        initialRouteName={isLoggedIn ? "Home" : "Login"} 
-        screenOptions={{ headerShown: false }}
+    return (
+      <NavigationContainer 
+        ref={navigationRef}
+        onReady={() => {
+          // Check for pending navigation from notification
+          const pendingNav = notificationService.getPendingNavigation();
+          if (pendingNav && navigationRef.current) {
+            setTimeout(() => {
+              notificationService.handleNotificationNavigation(pendingNav, navigationRef.current);
+            }, 500);
+          }
+        }}
       >
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="Home" component={HomeScreenWithNav} />
-        <Stack.Screen name="Training" component={HomeScreenWithNav} />
-        {/* <Stack.Screen name="TrainingFace" component={TrainingFace} /> */}
-        <Stack.Screen name="Profile" component={ProfileScreenWithNav} />
-        <Stack.Screen name="Register" component={RegisterScreen} />
-        <Stack.Screen name="Courses" component={CoursesScreen} />
-        <Stack.Screen name="Notifications" component={NotificationsScreen} />
-        <Stack.Screen name="Camera" component={CameraScreenNoNav} />
-        <Stack.Screen name="MateriEyeTracking" component={MateriEyeTrackingScreen} />
-        <Stack.Screen name="TrainingFace" component={FaceCaptureScreen} />
-        <Stack.Screen name="RiwayatPresensi" component={RiwayatPresensiScreenWithNav} />
-        <Stack.Screen name="InformasiList" component={InformasiListScreen} />
-        <Stack.Screen name="InformasiDetail" component={InformasiDetailScreen} />
-        <Stack.Screen name="JadwalKuliah" component={JadwalKuliahScreenWithNav} />
-        <Stack.Screen name="DaftarMateri" component={DaftarMateriScreen} />
-        {/* ✅ sudah didaftarkan */}
-      </Stack.Navigator>
-    </NavigationContainer>
-  );
+        <Stack.Navigator
+          initialRouteName={isLoggedIn ? "Home" : "Login"}
+          screenOptions={{
+            headerShown: false
+          }}
+        >
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="Home" component={HomeScreenWithNav} />
+          <Stack.Screen name="Training" component={HomeScreenWithNav} />
+          {/* <Stack.Screen name="TrainingFace" component={TrainingFace} /> */}
+          <Stack.Screen name="Profile" component={ProfileScreenWithNav} />
+          <Stack.Screen name="Register" component={RegisterScreen} />
+          <Stack.Screen name="Courses" component={CoursesScreen} />
+          <Stack.Screen name="Notifications" component={NotificationsScreen} />
+          <Stack.Screen name="Camera" component={CameraScreenNoNav} />
+          <Stack.Screen name="MateriEyeTracking" component={MateriEyeTrackingScreen} />
+          <Stack.Screen name="TrainingFace" component={FaceCaptureScreen} />
+          <Stack.Screen name="RiwayatPresensi" component={RiwayatPresensiScreenWithNav} />
+          <Stack.Screen name="InformasiList" component={InformasiListScreen} />
+          <Stack.Screen name="InformasiDetail" component={InformasiDetailScreen} />
+          <Stack.Screen name="JadwalKuliah" component={JadwalKuliahScreenWithNav} />
+          <Stack.Screen name="DaftarMateri" component={DaftarMateriScreen} />
+          {/* ✅ sudah didaftarkan */}
+        </Stack.Navigator>
+      </NavigationContainer>
+    );
 };
 
 export default App;

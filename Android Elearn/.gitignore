@@ -35,6 +35,11 @@ local.properties
 !debug.keystore
 .kotlin/
 
+# Firebase Credentials - CRITICAL!
+android/app/google-services.json
+google-services.json
+*.jks
+
 # node.js
 #
 node_modules/
