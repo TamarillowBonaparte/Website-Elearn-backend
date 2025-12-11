@@ -1,9 +1,11 @@
 // src/pages/kelolaDosen.jsx
 import DashboardLayout from "../layouts/dashboardlayout";
+import { usePolling } from "../hooks/usePolling";
 import { useState, useEffect } from "react";
 import { navigationItems } from "../navigation/navigation";
 import { Users, Edit2, AlertCircle, BookOpen, X, Plus, Trash2 } from "lucide-react";
 import axios from "axios";
+import { getUser, getToken } from "../utils/auth";
 
 const API_BASE_URL = "http://localhost:8000";
 
@@ -15,11 +17,11 @@ export default function KelolaDosen() {
   const [selectedDosen, setSelectedDosen] = useState(null);
   const [assignments, setAssignments] = useState([]);
   const [loadingAssignments, setLoadingAssignments] = useState(false);
-  
+
   // Get current user info
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-  const isSuperAdmin = currentUser.role === 'super_admin';
-  
+  const currentUser = getUser() || {};
+  const isSuperAdmin = currentUser.role === 'super_admin' || currentUser.role === 'admin';
+
   // Edit Modal State
   const [showEditModal, setShowEditModal] = useState(false);
   const [editFormData, setEditFormData] = useState({
@@ -32,7 +34,7 @@ export default function KelolaDosen() {
     agama: '',
     alamat: ''
   });
-  
+
   // Form state for adding new assignment
   const [showAddForm, setShowAddForm] = useState(false);
   const [kelasList, setKelasList] = useState([]);
@@ -45,16 +47,21 @@ export default function KelolaDosen() {
   });
   const [notification, setNotification] = useState({ show: false, type: '', message: '' });
 
+
+
   useEffect(() => {
     fetchAllDosen();
     fetchKelasList();
     fetchMatkulList();
   }, []);
 
+  // Poll for updates every 5 seconds
+
+
   const fetchAllDosen = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem("token");
+      const token = getToken();
       const response = await axios.get(`${API_BASE_URL}/dosen`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -66,6 +73,9 @@ export default function KelolaDosen() {
       setLoading(false);
     }
   };
+
+  // Poll for updates every 5 seconds
+  usePolling(fetchAllDosen, 5000);
 
   const fetchKelasList = async () => {
     try {
@@ -94,7 +104,7 @@ export default function KelolaDosen() {
   const fetchDosenAssignments = async (id_dosen) => {
     try {
       setLoadingAssignments(true);
-      const token = localStorage.getItem("token");
+      const token = getToken();
       const response = await axios.get(`${API_BASE_URL}/kelas-mata-kuliah/dosen/${id_dosen}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -130,7 +140,7 @@ export default function KelolaDosen() {
 
   const handleAddAssignment = async (e) => {
     e.preventDefault();
-    
+
     if (!formData.id_kelas || !formData.kode_mk) {
       showNotification('error', 'Kelas dan Mata Kuliah harus dipilih');
       return;
@@ -150,7 +160,7 @@ export default function KelolaDosen() {
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      
+
       showNotification('success', 'Assignment berhasil ditambahkan');
       setShowAddForm(false);
       setFormData({
@@ -176,7 +186,7 @@ export default function KelolaDosen() {
       await axios.delete(`${API_BASE_URL}/kelas-mata-kuliah/${id_kelas_mk}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       showNotification('success', 'Assignment berhasil dihapus');
       fetchDosenAssignments(selectedDosen.id_dosen);
     } catch (error) {
@@ -187,7 +197,7 @@ export default function KelolaDosen() {
 
   const handleToggleStatus = async (id_kelas_mk, currentStatus) => {
     const newStatus = currentStatus === 'Aktif' ? 'Selesai' : 'Aktif';
-    
+
     try {
       const token = localStorage.getItem("token");
       await axios.put(
@@ -195,7 +205,7 @@ export default function KelolaDosen() {
         { status: newStatus },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      
+
       showNotification('success', `Status berhasil diubah menjadi ${newStatus}`);
       fetchDosenAssignments(selectedDosen.id_dosen);
     } catch (error) {
@@ -243,7 +253,7 @@ export default function KelolaDosen() {
 
   const handleUpdateDosen = async (e) => {
     e.preventDefault();
-    
+
     try {
       const token = localStorage.getItem("token");
       await axios.put(
@@ -251,7 +261,7 @@ export default function KelolaDosen() {
         editFormData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      
+
       showNotification('success', 'Data dosen berhasil diupdate');
       handleCloseEditModal();
       fetchAllDosen();
@@ -277,9 +287,8 @@ export default function KelolaDosen() {
       {/* Notification */}
       {notification.show && (
         <div className="fixed top-4 right-4 z-50 animate-slide-in">
-          <div className={`px-6 py-4 rounded-xl shadow-lg flex items-center gap-3 ${
-            notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
-          } text-white`}>
+          <div className={`px-6 py-4 rounded-xl shadow-lg flex items-center gap-3 ${notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
+            } text-white`}>
             {notification.type === 'success' ? '✓' : '✕'} {notification.message}
           </div>
         </div>
@@ -313,9 +322,8 @@ export default function KelolaDosen() {
                   <td className="py-3 px-4 text-sm text-gray-600">{dosen.email_dosen || dosen.email || '-'}</td>
                   <td className="py-3 px-4 text-sm text-gray-600">{dosen.no_hp || '-'}</td>
                   <td className="py-3 px-4 text-sm">
-                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                      dosen.jenis_kelamin === 'L' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'
-                    }`}>
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${dosen.jenis_kelamin === 'L' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'
+                      }`}>
                       {dosen.jenis_kelamin === 'L' ? 'Laki-laki' : dosen.jenis_kelamin === 'P' ? 'Perempuan' : '-'}
                     </span>
                   </td>
@@ -379,7 +387,7 @@ export default function KelolaDosen() {
 
       {/* Modal Kelola Assignment */}
       {showModal && selectedDosen && (
-        <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, margin: 0}} className="w-screen h-screen bg-black/60 flex items-center justify-center z-[100] p-4 backdrop-blur-sm">
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, margin: 0 }} className="w-screen h-screen bg-black/60 flex items-center justify-center z-[100] p-4 backdrop-blur-sm">
           <div className="bg-white rounded-2xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
             <div className="flex items-center justify-between mb-6">
               <div>
@@ -419,7 +427,7 @@ export default function KelolaDosen() {
                     </label>
                     <select
                       value={formData.id_kelas}
-                      onChange={(e) => setFormData({...formData, id_kelas: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, id_kelas: e.target.value })}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
                       required
                     >
@@ -437,7 +445,7 @@ export default function KelolaDosen() {
                     </label>
                     <select
                       value={formData.kode_mk}
-                      onChange={(e) => setFormData({...formData, kode_mk: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, kode_mk: e.target.value })}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
                       required
                     >
@@ -456,7 +464,7 @@ export default function KelolaDosen() {
                     <input
                       type="text"
                       value={formData.tahun_ajaran}
-                      onChange={(e) => setFormData({...formData, tahun_ajaran: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, tahun_ajaran: e.target.value })}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
                       placeholder="2024/2025"
                     />
@@ -467,7 +475,7 @@ export default function KelolaDosen() {
                     </label>
                     <select
                       value={formData.semester_aktif}
-                      onChange={(e) => setFormData({...formData, semester_aktif: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, semester_aktif: e.target.value })}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="Ganjil">Ganjil</option>
@@ -520,13 +528,12 @@ export default function KelolaDosen() {
                           <p className="text-sm text-gray-600">
                             {assignment.nama_kelas} • {assignment.prodi} • {assignment.tahun_ajaran} • Semester {assignment.semester_aktif}
                           </p>
-                          <span className={`inline-block mt-1 text-xs px-2 py-1 rounded-full ${
-                            assignment.status === 'Aktif' 
-                              ? 'bg-green-100 text-green-700' 
-                              : assignment.status === 'Selesai'
+                          <span className={`inline-block mt-1 text-xs px-2 py-1 rounded-full ${assignment.status === 'Aktif'
+                            ? 'bg-green-100 text-green-700'
+                            : assignment.status === 'Selesai'
                               ? 'bg-blue-100 text-blue-700'
                               : 'bg-gray-100 text-gray-700'
-                          }`}>
+                            }`}>
                             {assignment.status}
                           </span>
                         </div>
@@ -534,18 +541,16 @@ export default function KelolaDosen() {
                           {/* Toggle Status Switch */}
                           <button
                             onClick={() => handleToggleStatus(assignment.id_kelas_mk, assignment.status)}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                              assignment.status === 'Aktif' ? 'bg-green-500' : 'bg-gray-300'
-                            }`}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${assignment.status === 'Aktif' ? 'bg-green-500' : 'bg-gray-300'
+                              }`}
                             title={`Status: ${assignment.status}. Klik untuk mengubah ke ${assignment.status === 'Aktif' ? 'Selesai' : 'Aktif'}`}
                           >
                             <span
-                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                                assignment.status === 'Aktif' ? 'translate-x-6' : 'translate-x-1'
-                              }`}
+                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${assignment.status === 'Aktif' ? 'translate-x-6' : 'translate-x-1'
+                                }`}
                             />
                           </button>
-                          
+
                           {/* Delete Button */}
                           <button
                             onClick={() => handleDeleteAssignment(assignment.id_kelas_mk)}
@@ -567,7 +572,7 @@ export default function KelolaDosen() {
 
       {/* Modal Edit Dosen */}
       {showEditModal && selectedDosen && (
-        <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, margin: 0}} className="w-screen h-screen bg-black/60 flex items-center justify-center z-[100] p-4 backdrop-blur-sm">
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, margin: 0 }} className="w-screen h-screen bg-black/60 flex items-center justify-center z-[100] p-4 backdrop-blur-sm">
           <div className="bg-white rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
             <div className="flex items-center justify-between mb-6">
               <div>
@@ -594,7 +599,7 @@ export default function KelolaDosen() {
                   <input
                     type="text"
                     value={editFormData.nama_dosen}
-                    onChange={(e) => setEditFormData({...editFormData, nama_dosen: e.target.value})}
+                    onChange={(e) => setEditFormData({ ...editFormData, nama_dosen: e.target.value })}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
                     required
                   />
@@ -608,7 +613,7 @@ export default function KelolaDosen() {
                   <input
                     type="email"
                     value={editFormData.email_dosen}
-                    onChange={(e) => setEditFormData({...editFormData, email_dosen: e.target.value})}
+                    onChange={(e) => setEditFormData({ ...editFormData, email_dosen: e.target.value })}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
                     required
                   />
@@ -622,7 +627,7 @@ export default function KelolaDosen() {
                   <input
                     type="text"
                     value={editFormData.no_hp}
-                    onChange={(e) => setEditFormData({...editFormData, no_hp: e.target.value})}
+                    onChange={(e) => setEditFormData({ ...editFormData, no_hp: e.target.value })}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
                     placeholder="08xxxxxxxxxx"
                   />
@@ -636,7 +641,7 @@ export default function KelolaDosen() {
                   <input
                     type="text"
                     value={editFormData.tempat_lahir}
-                    onChange={(e) => setEditFormData({...editFormData, tempat_lahir: e.target.value})}
+                    onChange={(e) => setEditFormData({ ...editFormData, tempat_lahir: e.target.value })}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -649,7 +654,7 @@ export default function KelolaDosen() {
                   <input
                     type="date"
                     value={editFormData.tanggal_lahir}
-                    onChange={(e) => setEditFormData({...editFormData, tanggal_lahir: e.target.value})}
+                    onChange={(e) => setEditFormData({ ...editFormData, tanggal_lahir: e.target.value })}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -661,7 +666,7 @@ export default function KelolaDosen() {
                   </label>
                   <select
                     value={editFormData.jenis_kelamin}
-                    onChange={(e) => setEditFormData({...editFormData, jenis_kelamin: e.target.value})}
+                    onChange={(e) => setEditFormData({ ...editFormData, jenis_kelamin: e.target.value })}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">Pilih</option>
@@ -677,7 +682,7 @@ export default function KelolaDosen() {
                   </label>
                   <select
                     value={editFormData.agama}
-                    onChange={(e) => setEditFormData({...editFormData, agama: e.target.value})}
+                    onChange={(e) => setEditFormData({ ...editFormData, agama: e.target.value })}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">Pilih</option>
@@ -697,7 +702,7 @@ export default function KelolaDosen() {
                   </label>
                   <textarea
                     value={editFormData.alamat}
-                    onChange={(e) => setEditFormData({...editFormData, alamat: e.target.value})}
+                    onChange={(e) => setEditFormData({ ...editFormData, alamat: e.target.value })}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
                     rows="3"
                   ></textarea>

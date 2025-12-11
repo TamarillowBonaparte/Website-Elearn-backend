@@ -1,8 +1,10 @@
 import DashboardLayout from "../layouts/dashboardlayout";
+import { usePolling } from "../hooks/usePolling";
 import { useState, useEffect } from "react";
 import { navigationItems } from "../navigation/navigation";
 import { CalendarDays, Clock, MapPin, Plus, Edit, Trash2, X, AlertCircle } from "lucide-react";
 import axios from "axios";
+import { getUser, getToken } from "../utils/auth";
 
 const API_BASE_URL = "http://localhost:8000";
 
@@ -17,7 +19,7 @@ export default function JadwalKuliah() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [kelasMkList, setKelasMkList] = useState([]);
-  
+
   const [formData, setFormData] = useState({
     id_kelas_mk: '',
     hari: 'Senin',
@@ -27,14 +29,16 @@ export default function JadwalKuliah() {
   });
 
   // Get current user
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-  const isSuperAdmin = currentUser.role === 'super_admin';
+  const currentUser = getUser() || {};
+  const isSuperAdmin = currentUser.role === 'super_admin' || currentUser.role === 'admin';
 
   // Format time from HH:MM:SS to HH:MM
   const formatTime = (timeString) => {
     if (!timeString) return '-';
     return timeString.substring(0, 5); // Get only HH:MM
   };
+
+
 
   useEffect(() => {
     fetchJadwal();
@@ -43,10 +47,13 @@ export default function JadwalKuliah() {
     }
   }, []);
 
+  // Poll for updates every 5 seconds
+
+
   const fetchJadwal = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem("token");
+      const token = getToken();
       const response = await axios.get(`${API_BASE_URL}/jadwal-kuliah/me`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -59,9 +66,12 @@ export default function JadwalKuliah() {
     }
   };
 
+  // Poll for updates every 5 seconds
+  usePolling(fetchJadwal, 5000);
+
   const fetchKelasMk = async () => {
     try {
-      const token = localStorage.getItem("token");
+      const token = getToken();
       const response = await axios.get(`${API_BASE_URL}/kelas-mata-kuliah`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -126,8 +136,8 @@ export default function JadwalKuliah() {
 
     try {
       setLoading(true);
-      const token = localStorage.getItem("token");
-      
+      const token = getToken();
+
       const payload = {
         id_kelas_mk: parseInt(formData.id_kelas_mk),
         hari: formData.hari,
@@ -173,7 +183,7 @@ export default function JadwalKuliah() {
 
     try {
       setLoading(true);
-      const token = localStorage.getItem("token");
+      const token = getToken();
       await axios.delete(`${API_BASE_URL}/jadwal-kuliah/${deleteTarget.id_jadwal}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -209,9 +219,8 @@ export default function JadwalKuliah() {
     >
       {/* Notification */}
       {notification.show && (
-        <div className={`fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg ${
-          notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
-        } text-white`}>
+        <div className={`fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg ${notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
+          } text-white`}>
           {notification.message}
         </div>
       )}
@@ -279,9 +288,8 @@ export default function JadwalKuliah() {
                 {jadwal.map((item, index) => (
                   <tr
                     key={item.id_jadwal}
-                    className={`border-b last:border-0 ${
-                      index % 2 === 0 ? "bg-white" : "bg-blue-50/60"
-                    } hover:bg-blue-100/40 transition`}
+                    className={`border-b last:border-0 ${index % 2 === 0 ? "bg-white" : "bg-blue-50/60"
+                      } hover:bg-blue-100/40 transition`}
                   >
                     <td className="py-2 px-4 font-mono text-xs text-gray-700">{item.kode_mk}</td>
                     <td className="py-2 px-4 text-gray-800 font-medium">{item.nama_mk}</td>
@@ -329,7 +337,7 @@ export default function JadwalKuliah() {
 
       {/* Modal Form */}
       {showModal && (
-        <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, margin: 0}} className="w-screen h-screen bg-black/50 flex items-center justify-center z-[100] p-4">
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, margin: 0 }} className="w-screen h-screen bg-black/50 flex items-center justify-center z-[100] p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-4 flex justify-between items-center rounded-t-2xl">
               <h2 className="text-xl font-semibold">
@@ -443,7 +451,7 @@ export default function JadwalKuliah() {
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
-        <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, margin: 0}} className="w-screen h-screen bg-black/60 flex items-center justify-center z-[100] backdrop-blur-sm">
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, margin: 0 }} className="w-screen h-screen bg-black/60 flex items-center justify-center z-[100] backdrop-blur-sm">
           <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl">
             <div className="flex items-center gap-3 mb-4">
               <div className="bg-red-100 p-3 rounded-full">

@@ -7,6 +7,7 @@ import {
   Edit2, Save, X, BookOpen, BarChart3
 } from "lucide-react";
 import axios from "axios";
+import { getToken, getUser } from "../utils/auth";
 
 const API_BASE_URL = "http://localhost:8000";
 
@@ -32,7 +33,7 @@ export default function ProfilSaya() {
   });
 
   // Get current user
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const currentUser = getUser() || {};
 
   useEffect(() => {
     // Check if user is admin (admin = dosen in database)
@@ -48,7 +49,11 @@ export default function ProfilSaya() {
   const fetchMyProfile = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem("token");
+      const token = getToken();
+      if (!token) {
+        showNotification('error', 'Token otentikasi tidak ditemukan. Silakan login ulang.');
+        return;
+      }
       
       // Get dosen by user_id
       const response = await axios.get(`${API_BASE_URL}/dosen`, {
@@ -81,7 +86,12 @@ export default function ProfilSaya() {
 
   const fetchMyAssignments = async () => {
     try {
-      const token = localStorage.getItem("token");
+      const token = getToken();
+      if (!token) {
+        showNotification('error', 'Token otentikasi tidak ditemukan. Silakan login ulang.');
+        setAssignments([]);
+        return;
+      }
       
       // Get all assignments and filter by current user
       const response = await axios.get(`${API_BASE_URL}/kelas-mata-kuliah`, {
@@ -101,7 +111,11 @@ export default function ProfilSaya() {
     e.preventDefault();
     
     try {
-      const token = localStorage.getItem("token");
+      const token = getToken();
+      if (!token) {
+        showNotification('error', 'Token otentikasi tidak ditemukan. Silakan login ulang.');
+        return;
+      }
       await axios.put(
         `${API_BASE_URL}/users/dosen/${currentUser.id_user}`,
         editFormData,

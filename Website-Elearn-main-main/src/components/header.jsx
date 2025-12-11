@@ -6,6 +6,7 @@ import {
   X,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
+import { getUser } from "../utils/auth";
 
 export default function Header({
   onLogout,
@@ -16,15 +17,11 @@ export default function Header({
   const [userData, setUserData] = useState(null);
   const dropdownRef = useRef(null);
 
-  // Load user data from localStorage
+  // Load user data from storage
   useEffect(() => {
-    const userStr = localStorage.getItem("user");
-    if (userStr) {
-      try {
-        setUserData(JSON.parse(userStr));
-      } catch (e) {
-        console.error("Error parsing user data:", e);
-      }
+    const user = getUser();
+    if (user) {
+      setUserData(user);
     }
   }, []);
 
@@ -83,23 +80,22 @@ export default function Header({
                   <span className="text-sm font-medium text-white">
                     {userData?.nama
                       ? userData.nama
-                          .split(" ")
-                          .map((n) => n[0])
-                          .slice(0, 2)
-                          .join("")
-                          .toUpperCase()
+                        .split(" ")
+                        .map((n) => n[0])
+                        .slice(0, 2)
+                        .join("")
+                        .toUpperCase()
                       : "U"}
                   </span>
                 </div>
                 <div className="hidden md:block text-left">
                   <p className="text-sm font-medium text-gray-900">
-                    {userData?.nama || "User"}
+                    {userData?.username || "User"}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {userData?.role
-                      ? userData.role.charAt(0).toUpperCase() +
-                        userData.role.slice(1)
-                      : "Pengguna"}
+                    {userData?.role === 'super_admin' ? 'Super Admin' :
+                      userData?.role === 'admin' ? 'Admin' :
+                        userData?.role || 'Pengguna'}
                   </p>
                 </div>
                 <ChevronDown className="h-4 w-4 text-gray-400 hidden sm:block" />

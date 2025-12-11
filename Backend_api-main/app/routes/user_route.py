@@ -18,7 +18,7 @@ from app.schemas.dosen_schema import (
     UserDosenUpdate
 )
 from app.core.security import hash_password
-from app.utils.token_utils import require_super_admin, get_current_user
+from app.utils.token_utils import require_super_admin, require_admin_or_super_admin, get_current_user
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -202,9 +202,9 @@ def create_admin(
 def create_dosen(
     dosen_data: UserDosenCreate, 
     db: Session = Depends(get_db),
-    current_user: dict = Depends(require_super_admin)
+    current_user: dict = Depends(require_admin_or_super_admin)
 ):
-    """Create dosen with user account and profile - Only super_admin"""
+    """Create dosen with user account and profile - Admin or Super Admin"""
     # Check if username exists
     if db.query(User).filter(User.username == dosen_data.username).first():
         raise HTTPException(status_code=400, detail="Username sudah digunakan")
@@ -275,9 +275,9 @@ def create_dosen(
 def create_mahasiswa(
     mahasiswa_data: UserMahasiswaCreate, 
     db: Session = Depends(get_db),
-    current_user: dict = Depends(require_super_admin)
+    current_user: dict = Depends(require_admin_or_super_admin)
 ):
-    """Create mahasiswa with user account and profile - Only super_admin"""
+    """Create mahasiswa with user account and profile - Admin or Super Admin"""
     # Check if username exists
     if db.query(User).filter(User.username == mahasiswa_data.username).first():
         raise HTTPException(status_code=400, detail="Username sudah digunakan")
@@ -357,9 +357,9 @@ def update_mahasiswa(
     user_id: int, 
     update_data: UserMahasiswaUpdate, 
     db: Session = Depends(get_db),
-    current_user: dict = Depends(require_super_admin)
+    current_user: dict = Depends(require_admin_or_super_admin)
 ):
-    """Update mahasiswa user and profile - Only super_admin"""
+    """Update mahasiswa user and profile - Admin or Super Admin"""
     user = db.query(User).filter(User.id_user == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User tidak ditemukan")
@@ -570,9 +570,9 @@ def update_dosen(
     user_id: int, 
     update_data: UserDosenUpdate, 
     db: Session = Depends(get_db),
-    current_user: dict = Depends(require_super_admin)
+    current_user: dict = Depends(require_admin_or_super_admin)
 ):
-    """Update dosen user and profile - Only super_admin"""
+    """Update dosen user and profile - Admin or Super Admin"""
     user = db.query(User).filter(User.id_user == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User tidak ditemukan")
@@ -670,9 +670,9 @@ def update_dosen(
 def delete_user(
     user_id: int, 
     db: Session = Depends(get_db),
-    current_user: dict = Depends(require_super_admin)
+    current_user: dict = Depends(require_admin_or_super_admin)
 ):
-    """Delete user - Only super_admin (mahasiswa/dosen profile will be deleted automatically via CASCADE)"""
+    """Delete user - Admin or Super Admin (mahasiswa/dosen profile will be deleted automatically via CASCADE)"""
     user = db.query(User).filter(User.id_user == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User tidak ditemukan")

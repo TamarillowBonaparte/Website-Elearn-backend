@@ -292,14 +292,14 @@ export default function CameraScreen({ route, navigation }) {
 
       {/* Auto capture toggle */}
       <View style={styles.autoToggleContainer}>
-        <Text style={styles.autoToggleLabel}>Auto Capture:</Text>
-        <TouchableOpacity
+        {/* <Text style={styles.autoToggleLabel}>Auto Capture:</Text> */}
+        {/* <TouchableOpacity
           style={[styles.autoToggle, { backgroundColor: autoCapture ? '#4CAF50' : '#666' }]}
           onPress={toggleAutoCapture}
         >
           <Icon name={autoCapture ? 'toggle-on' : 'toggle-off'} size={32} color="white" />
           <Text style={styles.autoToggleText}>{autoCapture ? 'ON' : 'OFF'}</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
 
         {autoCapture && (
           <Text style={styles.autoInfoText}>

@@ -1,8 +1,9 @@
 import DashboardLayout from "../layouts/dashboardlayout";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { navigationItems } from "../navigation/navigation";
 import { UserCheck, Plus, Search, Filter, Eye, Calendar, Users, BookOpen, Clock, Trash, XCircle, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { getToken, getUser } from "../utils/auth";
 
 export default function Presensi() {
   const [activeNav, setActiveNav] = useState("presensi");
@@ -29,8 +30,8 @@ export default function Presensi() {
   const [loading, setLoading] = useState(true);
   
   // Get current user role
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-  const isSuperAdmin = currentUser.role === 'super_admin';
+  const currentUser = getUser() || {};
+  const isSuperAdmin = currentUser.role === 'super_admin' || currentUser.role === 'admin';
   
   // State untuk modal sukses
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -42,50 +43,54 @@ export default function Presensi() {
   const [deleteSuccessInfo, setDeleteSuccessInfo] = useState(null);
   const [notification, setNotification] = useState({ show: false, type: '', message: '' });
 
-  // Load data kelas_mata_kuliah dari backend
-  useEffect(() => {
-    loadDataKelasMK();
-  }, []);
-
-  // Load presensi after kelasMK is loaded
-  useEffect(() => {
-    if (daftarKelasMK.length > 0 || isSuperAdmin) {
-      loadDataPresensi();
-    }
-  }, [daftarKelasMK]);
-
-  const showNotification = (type, message) => {
+  const showNotification = useCallback((type, message) => {
     setNotification({ show: true, type, message });
     setTimeout(() => {
       setNotification({ show: false, type: '', message: '' });
     }, 3000);
-  };
+  }, []);
 
-  const loadDataKelasMK = async () => {
+  const loadDataKelasMK = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getToken();
+      if (!token) {
+        showNotification('error', 'Token otentikasi tidak ditemukan. Silakan login ulang.');
+        setDaftarKelasMK([]);
+        return;
+      }
       const response = await fetch("http://localhost:8000/kelas-mata-kuliah/me", {
         headers: {
-          'Authorization': `Bearer ${token}`
+          Authorization: `Bearer ${token}`
         }
       });
       if (response.ok) {
         const data = await response.json();
         console.log("✅ Loaded kelas mata kuliah:", data);
-        // Filter only active courses (case-insensitive)
         const activeData = data.filter(mk => mk.status && mk.status.toLowerCase() === 'aktif');
         setDaftarKelasMK(activeData);
+      } else {
+        setDaftarKelasMK([]);
       }
     } catch (error) {
       console.error("Error loading kelas mata kuliah:", error);
       showNotification('error', "⚠️ Gagal memuat data mata kuliah. Pastikan backend berjalan dan Anda sudah login!");
       setDaftarKelasMK([]);
     }
-  };
+  }, [showNotification]);
 
-  const loadDataPresensi = async () => {
+  const loadDataPresensi = useCallback(async () => {
     try {
-      const response = await fetch("http://localhost:8000/presensi/list");
+      const token = getToken();
+      if (!token) {
+        showNotification('error', 'Token otentikasi tidak ditemukan. Silakan login ulang.');
+        setDaftarPresensi([]);
+        return;
+      }
+      const response = await fetch("http://localhost:8000/presensi/list", {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
       if (response.ok) {
         const data = await response.json();
         console.log("✅ Loaded presensi:", data);
@@ -107,7 +112,17 @@ export default function Presensi() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [daftarKelasMK, isSuperAdmin, showNotification]);
+
+  useEffect(() => {
+    loadDataKelasMK();
+  }, [loadDataKelasMK]);
+
+  useEffect(() => {
+    if (daftarKelasMK.length > 0 || isSuperAdmin) {
+      loadDataPresensi();
+    }
+  }, [daftarKelasMK, isSuperAdmin, loadDataPresensi]);
 
   const handleGeneratePresensi = async () => {
     if (!generateForm.id_kelas_mk || !generateForm.minggu || !generateForm.tanggal || !generateForm.waktu_mulai || !generateForm.waktu_selesai) {
@@ -130,7 +145,11 @@ export default function Presensi() {
     console.log("📤 Sending generate request:", dataGenerate);
 
     try {
-      const token = localStorage.getItem('token');
+      const token = getToken();
+      if (!token) {
+        showNotification('error', 'Token otentikasi tidak ditemukan. Silakan login ulang.');
+        return;
+      }
       const response = await fetch("http://localhost:8000/presensi/generate", {
         method: "POST",
         headers: {
@@ -196,8 +215,13 @@ export default function Presensi() {
   const confirmDeletePresensi = async () => {
     if (!deleteTarget) return;
     try {
+      const token = getToken();
+      if (!token) {
+        showNotification('error', 'Token otentikasi tidak ditemukan. Silakan login ulang.');
+        return;
+      }
       const url = `http://localhost:8000/presensi/delete/${deleteTarget.id_kelas_mk}/${deleteTarget.tanggal}/${deleteTarget.pertemuan}`;
-      const response = await fetch(url, { method: 'DELETE' });
+      const response = await fetch(url, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
       const result = await response.json().catch(() => ({}));
       if (response.ok) {
         setDaftarPresensi(prev => prev.filter(p => !(p.id_kelas_mk === deleteTarget.id_kelas_mk && p.tanggal === deleteTarget.tanggal && p.pertemuan === deleteTarget.pertemuan)));

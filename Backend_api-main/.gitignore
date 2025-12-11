@@ -1,0 +1,57 @@
+# Firebase Credentials - CRITICAL!
+serviceAccountKey.json
+google-services.json
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Test files
+test_*.py
+*_test.py
+test_token_*.py
+
+# Uploads
+uploads/
+static/uploads/
+
+# Coverage
+.coverage
+htmlcov/

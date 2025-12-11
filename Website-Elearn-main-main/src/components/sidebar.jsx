@@ -27,6 +27,7 @@
 // src/components/sidebar.jsx
 import "./Sidebar.css";
 import { useNavigate } from "react-router-dom";
+import { getRole } from "../utils/auth";
 
 export default function Sidebar({
   navigationItems,
@@ -68,7 +69,7 @@ export default function Sidebar({
     }
   };
 
-  const userRole = localStorage.getItem("role");
+  const userRole = getRole();
 
   return (
     <div className="sidebar lg:bg-transparent bg-white h-screen lg:h-auto overflow-y-auto">

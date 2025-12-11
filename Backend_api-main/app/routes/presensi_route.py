@@ -93,6 +93,45 @@ def generate_presensi(
         })
     
     db.commit()
+
+    # Send Push Notification
+    try:
+        from app.services.notification_service import notification_service
+        from app.models.user_device_model import UserDevice
+        
+        if not notification_service.active:
+            print("⚠️ Notification service not active, skipping push notification")
+        else:
+            # Get user IDs of students
+            student_user_ids = [m.user_id for m in mahasiswa_list if m.user_id]
+            
+            if student_user_ids:
+                devices = db.query(UserDevice).filter(
+                    UserDevice.id_user.in_(student_user_ids)
+                ).all()
+                tokens = [d.fcm_token for d in devices if d.fcm_token]
+                
+                if tokens:
+                    print(f"📱 Sending presensi notification to {len(tokens)} devices")
+                    result = notification_service.send_multicast(
+                        tokens=tokens,
+                        title="📅 Presensi Dibuka",
+                        body=f"Presensi {kelas_mk.nama_mk} Pertemuan {request.pertemuan_ke} telah dibuka.",
+                        data={
+                            "type": "presensi",
+                            "id_kelas_mk": str(request.id_kelas_mk),
+                            "pertemuan_ke": str(request.pertemuan_ke),
+                            "action": "open_presensi"
+                        },
+                        db_session=db
+                    )
+                    print(f"✅ Presensi notifications sent: {result}")
+                else:
+                    print("ℹ️ No devices found for students")
+    except Exception as e:
+        print(f"❌ Error sending presensi notification: {e}")
+        # Don't fail the whole request
+    
     
     return {
         "message": "Presensi berhasil digenerate",

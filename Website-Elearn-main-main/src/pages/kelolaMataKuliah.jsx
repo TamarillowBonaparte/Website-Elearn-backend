@@ -1,8 +1,10 @@
 import DashboardLayout from "../layouts/dashboardlayout";
+import { usePolling } from "../hooks/usePolling";
 import { useState, useEffect } from "react";
 import { navigationItems } from "../navigation/navigation";
 import { BookOpen, Plus, Edit, Trash2, X, AlertCircle } from "lucide-react";
 import axios from "axios";
+import { getUser, getToken } from "../utils/auth";
 
 const API_BASE_URL = "http://localhost:8000";
 
@@ -16,7 +18,7 @@ export default function KelolaMataKuliah() {
   const [notification, setNotification] = useState({ show: false, type: '', message: '' });
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
-  
+
   const [formData, setFormData] = useState({
     kode_mk: '',
     nama_mk: '',
@@ -26,17 +28,20 @@ export default function KelolaMataKuliah() {
   });
 
   // Get current user
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-  const isSuperAdmin = currentUser.role === 'super_admin';
+  const currentUser = getUser() || {};
+  const isSuperAdmin = currentUser.role === 'super_admin' || currentUser.role === 'admin';
 
-  useEffect(() => {
-    fetchMataKuliah();
-  }, []);
+  console.log('[kelolaMataKuliah] Current User:', currentUser);
+  console.log('[kelolaMataKuliah] Role:', currentUser.role);
+  console.log('[kelolaMataKuliah] isSuperAdmin:', isSuperAdmin);
+
+  // Poll for updates every 5 seconds
+
 
   const fetchMataKuliah = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem("token");
+      const token = getToken();
       const response = await axios.get(`${API_BASE_URL}/mata-kuliah`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -55,6 +60,9 @@ export default function KelolaMataKuliah() {
       setNotification({ show: false, type: '', message: '' });
     }, 3000);
   };
+
+  // Poll for updates every 5 seconds
+  usePolling(fetchMataKuliah, 5000);
 
   const handleOpenModal = (mk = null) => {
     if (mk) {
@@ -96,7 +104,7 @@ export default function KelolaMataKuliah() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!formData.kode_mk || !formData.nama_mk) {
       showNotification('error', 'Kode MK dan Nama MK harus diisi');
       return;
@@ -127,7 +135,7 @@ export default function KelolaMataKuliah() {
         );
         showNotification('success', 'Mata kuliah berhasil ditambahkan');
       }
-      
+
       handleCloseModal();
       fetchMataKuliah();
     } catch (error) {
@@ -149,7 +157,7 @@ export default function KelolaMataKuliah() {
       await axios.delete(`${API_BASE_URL}/mata-kuliah/${deleteTarget.kode_mk}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       showNotification('success', 'Mata kuliah berhasil dihapus');
       fetchMataKuliah();
     } catch (error) {
@@ -177,9 +185,8 @@ export default function KelolaMataKuliah() {
       {/* Notification */}
       {notification.show && (
         <div className="fixed top-4 right-4 z-50 animate-slide-in">
-          <div className={`px-6 py-4 rounded-xl shadow-lg flex items-center gap-3 ${
-            notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
-          } text-white`}>
+          <div className={`px-6 py-4 rounded-xl shadow-lg flex items-center gap-3 ${notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
+            } text-white`}>
             {notification.type === 'success' ? '✓' : '✕'} {notification.message}
           </div>
         </div>
@@ -225,11 +232,10 @@ export default function KelolaMataKuliah() {
                 </tr>
               ) : (
                 mataKuliahList.map((mk, index) => (
-                  <tr 
+                  <tr
                     key={mk.kode_mk}
-                    className={`border-b hover:bg-gray-50 ${
-                      index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'
-                    }`}
+                    className={`border-b hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'
+                      }`}
                   >
                     <td className="py-3 px-4 font-mono text-sm font-semibold">{mk.kode_mk}</td>
                     <td className="py-3 px-4 font-medium">{mk.nama_mk}</td>
@@ -274,7 +280,7 @@ export default function KelolaMataKuliah() {
 
       {/* Modal Add/Edit */}
       {showModal && (
-        <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, margin: 0}} className="w-screen h-screen bg-black/60 flex items-center justify-center z-[100] p-4 backdrop-blur-sm">
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, margin: 0 }} className="w-screen h-screen bg-black/60 flex items-center justify-center z-[100] p-4 backdrop-blur-sm">
           <div className="bg-white rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-bold text-gray-800">
@@ -298,7 +304,7 @@ export default function KelolaMataKuliah() {
                   <input
                     type="text"
                     value={formData.kode_mk}
-                    onChange={(e) => setFormData({...formData, kode_mk: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, kode_mk: e.target.value })}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
                     placeholder="Contoh: BD001"
                     disabled={isEditMode}
@@ -315,7 +321,7 @@ export default function KelolaMataKuliah() {
                   <input
                     type="text"
                     value={formData.nama_mk}
-                    onChange={(e) => setFormData({...formData, nama_mk: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, nama_mk: e.target.value })}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
                     placeholder="Contoh: Basis Data"
                     required
@@ -332,7 +338,7 @@ export default function KelolaMataKuliah() {
                     <input
                       type="number"
                       value={formData.sks}
-                      onChange={(e) => setFormData({...formData, sks: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, sks: e.target.value })}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
                       placeholder="1-6"
                       min="1"
@@ -348,7 +354,7 @@ export default function KelolaMataKuliah() {
                     <input
                       type="number"
                       value={formData.semester}
-                      onChange={(e) => setFormData({...formData, semester: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, semester: e.target.value })}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
                       placeholder="1-8"
                       min="1"
@@ -364,7 +370,7 @@ export default function KelolaMataKuliah() {
                   </label>
                   <textarea
                     value={formData.deskripsi}
-                    onChange={(e) => setFormData({...formData, deskripsi: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, deskripsi: e.target.value })}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
                     rows="3"
                     placeholder="Deskripsi singkat mata kuliah"
@@ -395,7 +401,7 @@ export default function KelolaMataKuliah() {
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
-        <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, margin: 0}} className="w-screen h-screen bg-black/60 flex items-center justify-center z-[100] backdrop-blur-sm">
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, margin: 0 }} className="w-screen h-screen bg-black/60 flex items-center justify-center z-[100] backdrop-blur-sm">
           <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl">
             <div className="flex items-center gap-3 mb-4">
               <div className="bg-red-100 p-3 rounded-full">

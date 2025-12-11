@@ -1,8 +1,10 @@
 import DashboardLayout from "../layouts/dashboardlayout";
+import { usePolling } from "../hooks/usePolling";
 import { useState, useEffect } from "react";
 import { navigationItems } from "../navigation/navigation";
 import { Calendar, Plus, Edit, Trash2, X, AlertCircle } from "lucide-react";
 import axios from "axios";
+import { getUser, getToken } from "../utils/auth";
 
 const API_BASE_URL = "http://localhost:8000";
 
@@ -16,12 +18,12 @@ export default function MataKuliah() {
   const [notification, setNotification] = useState({ show: false, type: '', message: '' });
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
-  
+
   // Dropdown options
   const [mataKuliahList, setMataKuliahList] = useState([]);
   const [kelasList, setKelasList] = useState([]);
   const [dosenList, setDosenList] = useState([]);
-  
+
   const [formData, setFormData] = useState({
     kode_mk: '',
     id_kelas: '',
@@ -32,13 +34,18 @@ export default function MataKuliah() {
   });
 
   // Get current user
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-  const isSuperAdmin = currentUser.role === 'super_admin';
+  const currentUser = getUser() || {};
+  const isSuperAdmin = currentUser.role === 'super_admin' || currentUser.role === 'admin';
+
+
 
   useEffect(() => {
     fetchKelasMK();
     fetchDropdownData();
   }, []);
+
+  // Poll for updates every 5 seconds
+
 
   const fetchKelasMK = async () => {
     try {
@@ -56,22 +63,25 @@ export default function MataKuliah() {
     }
   };
 
+  // Poll for updates every 5 seconds
+  usePolling(fetchKelasMK, 5000);
+
   const fetchDropdownData = async () => {
     try {
-      const token = localStorage.getItem("token");
-      
+      const token = getToken();
+
       // Fetch mata kuliah
       const mkResponse = await axios.get(`${API_BASE_URL}/mata-kuliah`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setMataKuliahList(mkResponse.data);
-      
+
       // Fetch kelas
       const kelasResponse = await axios.get(`${API_BASE_URL}/kelas`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setKelasList(kelasResponse.data);
-      
+
       // Fetch dosen
       const dosenResponse = await axios.get(`${API_BASE_URL}/dosen`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -220,9 +230,8 @@ export default function MataKuliah() {
       {/* Notification */}
       {notification.show && (
         <div className="fixed top-4 right-4 z-50 animate-slide-in">
-          <div className={`px-6 py-4 rounded-xl shadow-lg flex items-center gap-3 ${
-            notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
-          } text-white`}>
+          <div className={`px-6 py-4 rounded-xl shadow-lg flex items-center gap-3 ${notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
+            } text-white`}>
             {notification.type === 'success' ? '✓' : '✕'} {notification.message}
           </div>
         </div>
@@ -281,11 +290,10 @@ export default function MataKuliah() {
                 </tr>
               ) : (
                 kelasMKList.map((kmk, index) => (
-                  <tr 
+                  <tr
                     key={kmk.id_kelas_mk}
-                    className={`border-b hover:bg-gray-50 ${
-                      index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'
-                    }`}
+                    className={`border-b hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'
+                      }`}
                   >
                     <td className="py-3 px-4 font-mono text-sm">{kmk.id_kelas_mk}</td>
                     <td className="py-3 px-4 font-mono text-sm font-semibold">{kmk.kode_mk}</td>
@@ -301,13 +309,12 @@ export default function MataKuliah() {
                     <td className="py-3 px-4 text-center">{kmk.tahun_ajaran}</td>
                     <td className="py-3 px-4 text-center">{kmk.semester_aktif}</td>
                     <td className="py-3 px-4 text-center">
-                      <span className={`inline-block px-2 py-1 rounded text-xs font-bold ${
-                        kmk.status === 'Aktif' 
-                          ? 'bg-green-100 text-green-700' 
-                          : kmk.status === 'Selesai'
+                      <span className={`inline-block px-2 py-1 rounded text-xs font-bold ${kmk.status === 'Aktif'
+                        ? 'bg-green-100 text-green-700'
+                        : kmk.status === 'Selesai'
                           ? 'bg-blue-100 text-blue-700'
                           : 'bg-gray-100 text-gray-600'
-                      }`}>
+                        }`}>
                         {kmk.status}
                       </span>
                     </td>
@@ -343,7 +350,7 @@ export default function MataKuliah() {
 
       {/* Modal Form */}
       {showModal && (
-        <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, margin: 0}} className="w-screen h-screen bg-black/40 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, margin: 0 }} className="w-screen h-screen bg-black/40 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-4 rounded-t-2xl flex items-center justify-between">
               <h2 className="text-xl font-bold flex items-center gap-2">
@@ -365,7 +372,7 @@ export default function MataKuliah() {
                 </label>
                 <select
                   value={formData.kode_mk}
-                  onChange={(e) => setFormData({...formData, kode_mk: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, kode_mk: e.target.value })}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
                   required
                   disabled={isEditMode}
@@ -385,7 +392,7 @@ export default function MataKuliah() {
                 </label>
                 <select
                   value={formData.id_kelas}
-                  onChange={(e) => setFormData({...formData, id_kelas: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, id_kelas: e.target.value })}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
                   required
                 >
@@ -404,7 +411,7 @@ export default function MataKuliah() {
                 </label>
                 <select
                   value={formData.id_dosen}
-                  onChange={(e) => setFormData({...formData, id_dosen: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, id_dosen: e.target.value })}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
                   required
                 >
@@ -424,7 +431,7 @@ export default function MataKuliah() {
                 <input
                   type="text"
                   value={formData.tahun_ajaran}
-                  onChange={(e) => setFormData({...formData, tahun_ajaran: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, tahun_ajaran: e.target.value })}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
                   placeholder="Contoh: 2024/2025"
                   required
@@ -437,7 +444,7 @@ export default function MataKuliah() {
                 </label>
                 <select
                   value={formData.semester_aktif}
-                  onChange={(e) => setFormData({...formData, semester_aktif: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, semester_aktif: e.target.value })}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
                   required
                 >
@@ -452,7 +459,7 @@ export default function MataKuliah() {
                 </label>
                 <select
                   value={formData.status}
-                  onChange={(e) => setFormData({...formData, status: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
                   required
                 >
@@ -484,7 +491,7 @@ export default function MataKuliah() {
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
-        <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, margin: 0}} className="w-screen h-screen bg-black/60 flex items-center justify-center z-[100] backdrop-blur-sm">
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, margin: 0 }} className="w-screen h-screen bg-black/60 flex items-center justify-center z-[100] backdrop-blur-sm">
           <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl">
             <div className="flex items-center gap-3 mb-4">
               <div className="bg-red-100 p-3 rounded-full">

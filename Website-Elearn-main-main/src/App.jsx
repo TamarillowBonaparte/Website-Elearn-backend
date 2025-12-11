@@ -24,7 +24,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 export default function App() {
   const protectedRoutes = [
     { path: "/dashboard", element: <Dashboard /> },
-    { path: "/mata-kuliah", element: <MataKuliah /> },
+    { path: "/mata-kuliah", element: <MataKuliah />, roles: ["super_admin"] },
     { path: "/presensi", element: <Presensi /> },
     { path: "/presensi/detail/:id_kelas_mk/:tanggal/:pertemuan_ke", element: <DetailPresensiAbsen /> },
     { path: "/presensi/:id_kelas_mk", element: <DetailPresensi /> },
@@ -33,40 +33,40 @@ export default function App() {
     { path: "/materi/kelas-mk/:id_kelas_mk", element: <DetailMateri /> },
     { path: "/materi/:id_kelas_mk/minggu/view", element: <ViewMinggu /> },
     { path: "/materi/:id_kelas_mk/minggu/:minggu", element: <MingguMateri /> },
-    { path: "/informasi", element: <Informasi /> },
-    { path: "/informasi/create", element: <InformasiForm /> },
-    { path: "/informasi/edit/:id", element: <InformasiForm /> },
-    { path: "/kelola-mata-kuliah", element: <KelolaMataKuliah /> },
-    { path: "/kelola-kelas", element: <KelolaKelas /> },
-    { path: "/kelola-dosen", element: <KelolaDosen /> },
-    { path: "/detail-profil-dosen/:id_dosen", element: <DetailProfilDosen /> },
-    { path: "/profil-saya", element: <ProfilSaya /> },
-    { path: "/user", element: <UserPage /> },
+    { path: "/informasi", element: <Informasi />, roles: ["super_admin"] },
+    { path: "/informasi/create", element: <InformasiForm />, roles: ["super_admin"] },
+    { path: "/informasi/edit/:id", element: <InformasiForm />, roles: ["super_admin"] },
+    { path: "/kelola-mata-kuliah", element: <KelolaMataKuliah />, roles: ["super_admin"] },
+    { path: "/kelola-kelas", element: <KelolaKelas />, roles: ["super_admin"] },
+    { path: "/kelola-dosen", element: <KelolaDosen />, roles: ["super_admin"] },
+    { path: "/detail-profil-dosen/:id_dosen", element: <DetailProfilDosen />, roles: ["super_admin"] },
+    { path: "/profil-saya", element: <ProfilSaya />, roles: ["admin"] },
+    { path: "/user", element: <UserPage />, roles: ["super_admin"] },
   ];
 
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
-      
-      <Route 
-        path="/" 
+
+      <Route
+        path="/"
         element={
-          localStorage.getItem('token') 
-            ? <Navigate to="/dashboard" replace /> 
+          localStorage.getItem('token')
+            ? <Navigate to="/dashboard" replace />
             : <Navigate to="/login" replace />
-        } 
+        }
       />
 
       {protectedRoutes.map((route) => (
         <Route
           key={route.path}
           path={route.path}
-          element={<ProtectedRoute>{route.element}</ProtectedRoute>}
+          element={<ProtectedRoute allowedRoles={route.roles}>{route.element}</ProtectedRoute>}
         />
       ))}
 
-      <Route 
-        path="*" 
+      <Route
+        path="*"
         element={
           <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
             <div className="text-center px-4">
@@ -80,15 +80,15 @@ export default function App() {
               <p className="text-gray-500 mb-8 max-w-md mx-auto">
                 Halaman yang Anda cari mungkin telah dihapus, namanya berubah, atau sementara tidak tersedia.
               </p>
-              <a 
-                href="/dashboard" 
+              <a
+                href="/dashboard"
                 className="inline-block bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-3 rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-1"
               >
                 Kembali ke Dashboard
               </a>
             </div>
           </div>
-        } 
+        }
       />
     </Routes>
   );

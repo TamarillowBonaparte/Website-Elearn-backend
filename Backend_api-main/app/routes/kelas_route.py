@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from app.core.database import get_db
 from app.models.kelas_model import Kelas
-from app.utils.token_utils import require_super_admin
+from app.utils.token_utils import require_super_admin, require_admin_or_super_admin
 from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/kelas", tags=["Kelas"])
@@ -81,9 +81,9 @@ def get_kelas_by_id(id_kelas: int, db: Session = Depends(get_db)):
 def create_kelas(
     payload: KelasCreate, 
     db: Session = Depends(get_db),
-    current_user: dict = Depends(require_super_admin)
+    current_user: dict = Depends(require_admin_or_super_admin)
 ):
-    """Tambah kelas baru (Super Admin only)"""
+    """Tambah kelas baru (Admin or Super Admin)"""
     try:
         if payload.prodi not in ("TIF", "MIF", "TKK"):
             raise HTTPException(status_code=400, detail="Prodi harus salah satu dari: TIF, MIF, TKK")
@@ -117,9 +117,9 @@ def update_kelas(
     id_kelas: int,
     payload: KelasUpdate,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(require_super_admin)
+    current_user: dict = Depends(require_admin_or_super_admin)
 ):
-    """Update kelas (Super Admin only)"""
+    """Update kelas (Admin or Super Admin)"""
     try:
         kelas = db.query(Kelas).filter(Kelas.id_kelas == id_kelas).first()
         if not kelas:
@@ -164,9 +164,9 @@ def update_kelas(
 def delete_kelas(
     id_kelas: int,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(require_super_admin)
+    current_user: dict = Depends(require_admin_or_super_admin)
 ):
-    """Delete kelas (Super Admin only)"""
+    """Delete kelas (Admin or Super Admin)"""
     try:
         kelas = db.query(Kelas).filter(Kelas.id_kelas == id_kelas).first()
         if not kelas:

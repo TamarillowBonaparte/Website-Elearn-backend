@@ -1,9 +1,17 @@
 // utils/apiUtils.js
 const API_BASE_URL = 'http://localhost:8000';
+import { getToken, clearAuth } from './auth';
 
 // Helper untuk membuat request dengan token
 export const apiRequest = async (endpoint, options = {}) => {
-  const token = localStorage.getItem('token');
+  const token = getToken();
+  
+  // Debug logging for 401 issues
+  if (!token) {
+    console.warn('[apiRequest] No token found for:', endpoint);
+  } else {
+    console.log('[apiRequest] Token exists for:', endpoint, 'Length:', token.length);
+  }
   
   const defaultHeaders = {
     'Content-Type': 'application/json',
@@ -26,7 +34,7 @@ export const apiRequest = async (endpoint, options = {}) => {
     
     // Jika token expired atau invalid, redirect ke login
     if (response.status === 401) {
-      localStorage.removeItem('token');
+      clearAuth();
       window.location.href = '/login';
       throw new Error('Session expired');
     }
@@ -92,7 +100,7 @@ export const apiDelete = async (endpoint) => {
 
 // Helper khusus untuk upload file (FormData)
 export const apiUpload = async (endpoint, formData, method = 'POST') => {
-  const token = localStorage.getItem('token');
+  const token = getToken();
   
   const headers = {};
   if (token) {
@@ -108,7 +116,7 @@ export const apiUpload = async (endpoint, formData, method = 'POST') => {
     });
 
     if (response.status === 401) {
-      localStorage.removeItem('token');
+      clearAuth();
       window.location.href = '/login';
       throw new Error('Session expired');
     }

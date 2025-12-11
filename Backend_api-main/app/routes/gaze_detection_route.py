@@ -2,6 +2,11 @@
 import time
 import numpy as np
 import cv2
+import os
+
+# Suppress MediaPipe logs
+os.environ["GLOG_minloglevel"] = "2"
+
 import mediapipe as mp
 from fastapi import APIRouter, File, UploadFile, HTTPException
 from pydantic import BaseModel
@@ -9,14 +14,20 @@ from typing import Tuple
 
 router = APIRouter(prefix="/gaze", tags=["Gaze Detection"])
 
-# MediaPipe init
+# MediaPipe init (Lazy)
 mp_face_mesh = mp.solutions.face_mesh
-face_mesh = mp_face_mesh.FaceMesh(
-    max_num_faces=1,
-    refine_landmarks=True,
-    min_detection_confidence=0.3,  # Lower threshold for easier detection
-    min_tracking_confidence=0.3    # Lower threshold for easier tracking
-)
+face_mesh = None
+
+def get_face_mesh():
+    global face_mesh
+    if face_mesh is None:
+        face_mesh = mp_face_mesh.FaceMesh(
+            max_num_faces=1,
+            refine_landmarks=True,
+            min_detection_confidence=0.3,
+            min_tracking_confidence=0.3
+        )
+    return face_mesh
 
 # iris indices (MediaPipe face_mesh)
 LEFT_IRIS = [474, 475, 476, 477]
@@ -43,7 +54,11 @@ def read_image_bytes(b: bytes):
 def process_frame(frame):
     h, w, _ = frame.shape
     rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    results = face_mesh.process(rgb)
+    h, w, _ = frame.shape
+    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    
+    mesh = get_face_mesh()
+    results = mesh.process(rgb)
     if not results.multi_face_landmarks:
         return None
 

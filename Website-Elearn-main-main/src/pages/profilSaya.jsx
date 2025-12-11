@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import DashboardLayout from "../layouts/dashboardlayout";
 import { navigationItems } from "../navigation/navigation";
-import { 
-  User, Mail, Phone, MapPin, Calendar, Award, 
+import {
+  User, Mail, Phone, MapPin, Calendar, Award,
   Edit2, Save, X, BookOpen, BarChart3
 } from "lucide-react";
 import axios from "axios";
@@ -19,7 +19,7 @@ export default function ProfilSaya() {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [notification, setNotification] = useState({ show: false, type: '', message: '' });
-  
+
   const [editFormData, setEditFormData] = useState({
     nama_dosen: '',
     email_dosen: '',
@@ -32,7 +32,7 @@ export default function ProfilSaya() {
   });
 
   // Get current user
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const currentUser = getUser() || {};
 
   useEffect(() => {
     // Check if user is admin (admin = dosen in database)
@@ -40,23 +40,23 @@ export default function ProfilSaya() {
       navigate('/dashboard');
       return;
     }
-    
+
     fetchMyProfile();
   }, []);
 
   const fetchMyProfile = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem("token");
-      
+      const token = getToken();
+
       // Get dosen by user_id
       const response = await axios.get(`${API_BASE_URL}/dosen`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       // Find current user's dosen data
       const myDosen = response.data.find(d => d.id_user === currentUser.id_user);
-      
+
       if (myDosen) {
         setDosen(myDosen);
         setEditFormData({
@@ -69,7 +69,7 @@ export default function ProfilSaya() {
           agama: myDosen.agama || '',
           alamat: myDosen.alamat || ''
         });
-        
+
         // Fetch assignments after we have id_dosen
         fetchMyAssignments(myDosen.id_dosen);
       }
@@ -83,13 +83,13 @@ export default function ProfilSaya() {
 
   const fetchMyAssignments = async (idDosen) => {
     try {
-      const token = localStorage.getItem("token");
-      
+      const token = getToken();
+
       // Get all assignments and filter by current user
       const response = await axios.get(`${API_BASE_URL}/kelas-mata-kuliah`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       // Filter assignments for current dosen using the passed id_dosen
       const myAssignments = response.data.filter(a => a.id_dosen === idDosen);
       setAssignments(myAssignments);
@@ -102,15 +102,15 @@ export default function ProfilSaya() {
 
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
-    
+
     try {
-      const token = localStorage.getItem("token");
+      const token = getToken();
       await axios.put(
         `${API_BASE_URL}/users/dosen/me/profile`,
         editFormData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      
+
       showNotification('success', 'Profil berhasil diupdate');
       setIsEditing(false);
       fetchMyProfile();
@@ -130,10 +130,10 @@ export default function ProfilSaya() {
   const formatDate = (dateString) => {
     if (!dateString) return '-';
     const date = new Date(dateString);
-    return date.toLocaleDateString('id-ID', { 
-      day: 'numeric', 
-      month: 'long', 
-      year: 'numeric' 
+    return date.toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
     });
   };
 
@@ -163,9 +163,8 @@ export default function ProfilSaya() {
       {/* Notification */}
       {notification.show && (
         <div className="fixed top-4 right-4 z-50 animate-slide-in">
-          <div className={`px-6 py-4 rounded-xl shadow-lg flex items-center gap-3 ${
-            notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
-          } text-white`}>
+          <div className={`px-6 py-4 rounded-xl shadow-lg flex items-center gap-3 ${notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
+            } text-white`}>
             {notification.type === 'success' ? '✓' : '✕'} {notification.message}
           </div>
         </div>
@@ -209,31 +208,28 @@ export default function ProfilSaya() {
             <div className="flex">
               <button
                 onClick={() => { setActiveTab("profil"); setIsEditing(false); }}
-                className={`flex items-center gap-2 px-6 py-4 border-b-2 transition ${
-                  activeTab === "profil"
-                    ? "border-blue-600 text-blue-600 font-semibold"
-                    : "border-transparent text-gray-600 hover:text-gray-900"
-                }`}
+                className={`flex items-center gap-2 px-6 py-4 border-b-2 transition ${activeTab === "profil"
+                  ? "border-blue-600 text-blue-600 font-semibold"
+                  : "border-transparent text-gray-600 hover:text-gray-900"
+                  }`}
               >
                 <User className="h-5 w-5" /> Profil Saya
               </button>
               <button
                 onClick={() => { setActiveTab("assignment"); setIsEditing(false); }}
-                className={`flex items-center gap-2 px-6 py-4 border-b-2 transition ${
-                  activeTab === "assignment"
-                    ? "border-blue-600 text-blue-600 font-semibold"
-                    : "border-transparent text-gray-600 hover:text-gray-900"
-                }`}
+                className={`flex items-center gap-2 px-6 py-4 border-b-2 transition ${activeTab === "assignment"
+                  ? "border-blue-600 text-blue-600 font-semibold"
+                  : "border-transparent text-gray-600 hover:text-gray-900"
+                  }`}
               >
                 <BookOpen className="h-5 w-5" /> Mata Kuliah Saya ({assignments.length})
               </button>
               <button
                 onClick={() => { setActiveTab("statistik"); setIsEditing(false); }}
-                className={`flex items-center gap-2 px-6 py-4 border-b-2 transition ${
-                  activeTab === "statistik"
-                    ? "border-blue-600 text-blue-600 font-semibold"
-                    : "border-transparent text-gray-600 hover:text-gray-900"
-                }`}
+                className={`flex items-center gap-2 px-6 py-4 border-b-2 transition ${activeTab === "statistik"
+                  ? "border-blue-600 text-blue-600 font-semibold"
+                  : "border-transparent text-gray-600 hover:text-gray-900"
+                  }`}
               >
                 <BarChart3 className="h-5 w-5" /> Statistik
               </button>
@@ -247,7 +243,7 @@ export default function ProfilSaya() {
                 {!isEditing ? (
                   <div className="space-y-6">
                     <h3 className="text-lg font-semibold text-gray-800 mb-4">Informasi Pribadi</h3>
-                    
+
                     <div className="grid md:grid-cols-2 gap-6">
                       <div className="flex items-start gap-3">
                         <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -345,7 +341,7 @@ export default function ProfilSaya() {
                         <input
                           type="text"
                           value={editFormData.nama_dosen}
-                          onChange={(e) => setEditFormData({...editFormData, nama_dosen: e.target.value})}
+                          onChange={(e) => setEditFormData({ ...editFormData, nama_dosen: e.target.value })}
                           className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
                           required
                         />
@@ -358,7 +354,7 @@ export default function ProfilSaya() {
                         <input
                           type="email"
                           value={editFormData.email_dosen}
-                          onChange={(e) => setEditFormData({...editFormData, email_dosen: e.target.value})}
+                          onChange={(e) => setEditFormData({ ...editFormData, email_dosen: e.target.value })}
                           className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
                           required
                         />
@@ -371,7 +367,7 @@ export default function ProfilSaya() {
                         <input
                           type="text"
                           value={editFormData.no_hp}
-                          onChange={(e) => setEditFormData({...editFormData, no_hp: e.target.value})}
+                          onChange={(e) => setEditFormData({ ...editFormData, no_hp: e.target.value })}
                           className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
                         />
                       </div>
@@ -383,7 +379,7 @@ export default function ProfilSaya() {
                         <input
                           type="text"
                           value={editFormData.tempat_lahir}
-                          onChange={(e) => setEditFormData({...editFormData, tempat_lahir: e.target.value})}
+                          onChange={(e) => setEditFormData({ ...editFormData, tempat_lahir: e.target.value })}
                           className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
                         />
                       </div>
@@ -395,7 +391,7 @@ export default function ProfilSaya() {
                         <input
                           type="date"
                           value={editFormData.tanggal_lahir}
-                          onChange={(e) => setEditFormData({...editFormData, tanggal_lahir: e.target.value})}
+                          onChange={(e) => setEditFormData({ ...editFormData, tanggal_lahir: e.target.value })}
                           className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
                         />
                       </div>
@@ -406,7 +402,7 @@ export default function ProfilSaya() {
                         </label>
                         <select
                           value={editFormData.agama}
-                          onChange={(e) => setEditFormData({...editFormData, agama: e.target.value})}
+                          onChange={(e) => setEditFormData({ ...editFormData, agama: e.target.value })}
                           className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
                         >
                           <option value="">Pilih</option>
@@ -425,7 +421,7 @@ export default function ProfilSaya() {
                         </label>
                         <textarea
                           value={editFormData.alamat}
-                          onChange={(e) => setEditFormData({...editFormData, alamat: e.target.value})}
+                          onChange={(e) => setEditFormData({ ...editFormData, alamat: e.target.value })}
                           className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
                           rows="3"
                         ></textarea>
@@ -455,7 +451,7 @@ export default function ProfilSaya() {
             {activeTab === "assignment" && (
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Mata Kuliah yang Saya Ampu</h3>
-                
+
                 {assignments.length === 0 ? (
                   <div className="text-center py-12 text-gray-500">
                     <BookOpen className="h-12 w-12 mx-auto mb-3 text-gray-300" />
@@ -491,11 +487,10 @@ export default function ProfilSaya() {
                               </span>
                             </div>
                           </div>
-                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                            assignment.status === 'Aktif' 
-                              ? 'bg-green-100 text-green-700' 
-                              : 'bg-gray-100 text-gray-700'
-                          }`}>
+                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${assignment.status === 'Aktif'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-gray-100 text-gray-700'
+                            }`}>
                             {assignment.status}
                           </span>
                         </div>
@@ -509,7 +504,7 @@ export default function ProfilSaya() {
             {activeTab === "statistik" && (
               <div className="space-y-6">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Statistik Mengajar</h3>
-                
+
                 <div className="grid md:grid-cols-3 gap-6">
                   <div className="bg-blue-50 rounded-xl p-6 border border-blue-100">
                     <div className="flex items-center justify-between mb-2">

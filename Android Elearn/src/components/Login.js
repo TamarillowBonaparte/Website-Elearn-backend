@@ -19,12 +19,14 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { COLORS, GRADIENTS } from '../constants/colors';
 import SessionManager from '../utils/SessionManager';
 import { API_URL } from '../config/api';
+import { notificationService } from '../services/NotificationService';
 
 const LoginScreen = ({ navigation }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({ username: '', password: '' });
+  const [showPassword, setShowPassword] = useState(false);
 
   // Validasi input
   const validateInputs = () => {
@@ -161,6 +163,18 @@ const LoginScreen = ({ navigation }) => {
       // Login berhasil
       console.log('✅ Login berhasil untuk:', username);
       
+      // Register FCM Token
+      try {
+        console.log('🔔 Registering FCM Token...');
+        const fcmToken = await notificationService.getFCMToken();
+        if (fcmToken) {
+          await notificationService.registerTokenWithBackend(fcmToken);
+        }
+      } catch (err) {
+        console.error('⚠️ Failed to register FCM token:', err);
+        // Continue login even if notification setup fails
+      }
+
       // Cek apakah user sudah memiliki embedding
       const hasEmbedding = await checkEmbeddingStatus(response.data.user.nim || username);
       
@@ -362,23 +376,36 @@ const LoginScreen = ({ navigation }) => {
               {/* Password Input */}
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>Password</Text>
-                <TextInput
-                  style={[
-                    styles.input,
-                    errors.password ? styles.inputError : null
-                  ]}
-                  placeholder="Masukkan password"
-                  placeholderTextColor={COLORS.gray400}
-                  value={password}
-                  onChangeText={(text) => {
-                    setPassword(text);
-                    if (errors.password) {
-                      setErrors(prev => ({ ...prev, password: '' }));
-                    }
-                  }}
-                  secureTextEntry
-                  editable={!isLoading}
-                />
+                <View style={styles.passwordContainer}>
+                  <TextInput
+                    style={[
+                      styles.passwordInput,
+                      errors.password ? styles.inputError : null
+                    ]}
+                    placeholder="Masukkan password"
+                    placeholderTextColor={COLORS.gray400}
+                    value={password}
+                    onChangeText={(text) => {
+                      setPassword(text);
+                      if (errors.password) {
+                        setErrors(prev => ({ ...prev, password: '' }));
+                      }
+                    }}
+                    secureTextEntry={!showPassword}
+                    editable={!isLoading}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeIcon}
+                    onPress={() => setShowPassword(!showPassword)}
+                    disabled={isLoading}
+                  >
+                    <Ionicons
+                      name={showPassword ? 'eye-outline' : 'eye-off-outline'}
+                      size={22}
+                      color={COLORS.gray500}
+                    />
+                  </TouchableOpacity>
+                </View>
                 {errors.password ? (
                   <Text style={styles.errorText}>{errors.password}</Text>
                 ) : null}
@@ -408,10 +435,9 @@ const LoginScreen = ({ navigation }) => {
               </TouchableOpacity>
 
               {/* Divider */}
-              <Text style={styles.divider}>atau</Text>
-
+            
               {/* Face Capture Button */}
-              <TouchableOpacity
+              {/* <TouchableOpacity
                 onPress={handleTraining}
                 style={[
                   styles.faceButton,
@@ -422,7 +448,7 @@ const LoginScreen = ({ navigation }) => {
               >
                 <Ionicons name="camera" size={20} color={COLORS.purple600} />
                 <Text style={styles.faceButtonText}>Face Capture Training</Text>
-              </TouchableOpacity>
+              </TouchableOpacity> */}
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -488,6 +514,27 @@ const styles = StyleSheet.create({
     padding: 14,
     fontSize: 16,
     color: COLORS.gray800,
+  },
+  passwordContainer: {
+    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  passwordInput: {
+    flex: 1,
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.gray200,
+    borderRadius: 12,
+    padding: 14,
+    paddingRight: 50,
+    fontSize: 16,
+    color: COLORS.gray800,
+  },
+  eyeIcon: {
+    position: 'absolute',
+    right: 14,
+    padding: 4,
   },
   inputError: {
     borderColor: '#EF4444',

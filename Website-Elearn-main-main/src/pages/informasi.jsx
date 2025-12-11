@@ -5,6 +5,7 @@ import {
   getInformasiListAdmin, 
   deleteInformasi 
 } from '../utils/apiUtils';
+import { getUser } from '../utils/auth';
 import { navigationItems } from '../navigation/navigation';
 import DashboardLayout from '../layouts/dashboardlayout';
 
@@ -24,8 +25,8 @@ const Informasi = () => {
   const [perPage, setPerPage] = useState(10);
 
   // Get current user and check role
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-  const isSuperAdmin = currentUser.role === 'super_admin';
+  const currentUser = getUser() || {};
+  const isSuperAdmin = currentUser.role === 'super_admin' || currentUser.role === 'admin';
 
   useEffect(() => {
     fetchInformasi();
